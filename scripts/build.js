@@ -343,6 +343,7 @@ function pageShell({ title, description, body, pageClass = "" }) {
       <div class="footer-inner">Copyright ${new Date().getFullYear()} ${escapeHtml(site.author)}. Built from LaTeX sources.</div>
     </footer>
   </div>
+  <script src="${pageClass === "article-page" ? "../assets/site.js" : "assets/site.js"}"></script>
 </body>
 </html>`;
 }
@@ -393,8 +394,7 @@ function renderIndex(posts) {
       <p>这是 Crystal-Sky 从博客园迁移出来的独立博客。旧文章可以逐步整理成 LaTeX 源文件并重新发布。</p>
     </section>
   </aside>
-</main>
-<script src="assets/site.js"></script>`;
+</main>`;
 
   return pageShell({ title: site.title, description: site.description, body });
 }

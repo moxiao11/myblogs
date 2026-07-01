@@ -3,3 +3,5 @@ dist/
 .DS_Store
 *.log
 .env
+cnblogs-home.html
+cnblogs-custom.css
