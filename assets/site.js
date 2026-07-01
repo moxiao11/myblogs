@@ -171,9 +171,9 @@
       card.classList.remove("has-knowledge-card");
     };
 
-    const showKnowledge = (card, answerText) => {
+    const showKnowledge = (card, answerText, explanationText = "") => {
       removeKnowledge(card);
-      const [heading, description] = knowledgeFor(card, answerText);
+      const [heading, description] = explanationText ? ["题目解析", explanationText] : knowledgeFor(card, answerText);
       const note = document.createElement("aside");
       note.className = "knowledge-card";
       note.dataset.knowledgeCard = "true";
@@ -189,6 +189,8 @@
       }
 
       const answerText = answerLine.textContent.replace(/^答案[:：]\s*/, "").trim();
+      const explanationLine = answerLine.nextElementSibling?.classList.contains("explanation-line") ? answerLine.nextElementSibling : null;
+      const explanationText = explanationLine ? explanationLine.textContent.replace(/^解析[:：]\s*/, "").trim() : "";
       const correct = [...answerText.matchAll(answerPattern)]
         .map((match) => match[1])
         .filter((value, index, all) => all.indexOf(value) === index)
@@ -202,6 +204,9 @@
       const isMultiple = correct.length > 1;
 
       answerLine.hidden = true;
+      if (explanationLine) {
+        explanationLine.hidden = true;
+      }
       card.classList.add("is-interactive");
       status.className = "quiz-status";
       status.setAttribute("aria-live", "polite");
@@ -223,6 +228,9 @@
       const clearResult = () => {
         card.classList.remove("quiz-correct", "quiz-wrong", "answer-revealed");
         answerLine.hidden = true;
+        if (explanationLine) {
+          explanationLine.hidden = true;
+        }
         status.textContent = "";
         removeKnowledge(card);
         for (const option of options) {
@@ -239,7 +247,7 @@
             option.classList.add("is-correct-option");
           }
         }
-        showKnowledge(card, answerText);
+        showKnowledge(card, answerText, explanationText);
       };
 
       const evaluate = () => {
