@@ -847,6 +847,10 @@ blockquote {
   padding: 8px 12px;
 }
 
+.answer-line[hidden] {
+  display: none;
+}
+
 pre {
   overflow-x: auto;
   background: #111827;

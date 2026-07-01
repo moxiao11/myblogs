@@ -268,7 +268,7 @@ function renderLines(text) {
         const heading = title ? `<p class="question-title">${inlineFormat(title)}</p>` : "";
         output.push(`<section class="qa-card">${heading}${renderLines(collected.text)}</section>`);
       } else if (env === "answer") {
-        output.push(`<p class="answer-line"><strong>答案：</strong>${inlineFormat(collected.text.replace(/\n+/g, " "))}</p>`);
+        output.push(`<p class="answer-line" hidden><strong>答案：</strong>${inlineFormat(collected.text.replace(/\n+/g, " "))}</p>`);
       } else if (["theorem", "lemma", "definition", "proposition", "corollary"].includes(env)) {
         const name = label ? ` (${inlineFormat(label)})` : "";
         output.push(`<div class="theorem"><strong>${env[0].toUpperCase()}${env.slice(1)}${name}.</strong> ${renderLines(collected.text)}</div>`);
