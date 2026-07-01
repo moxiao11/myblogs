@@ -102,6 +102,9 @@ function preprocessLatex(body) {
     .replace(/\\begin\{document\}/g, "")
     .replace(/\\end\{document\}/g, "")
     .replace(/\\maketitle/g, "")
+    .replace(/\\tableofcontents/g, "")
+    .replace(/\\newpage/g, "")
+    .replace(/\\addcontentsline\{[^}]+\}\{[^}]+\}\{[^}]+\}/g, "")
     .replace(/\\title\{[^}]+\}/g, "")
     .replace(/\\author\{[^}]+\}/g, "")
     .replace(/\\date\{[^}]+\}/g, "");
@@ -155,6 +158,10 @@ function inlineFormat(raw) {
     .replace(/\\ldots/g, "...")
     .replace(/\\%/g, "%")
     .replace(/\\&/g, "&amp;")
+    .replace(/\\_/g, "_")
+    .replace(/\\\{/g, "{")
+    .replace(/\\\}/g, "}")
+    .replace(/\\#/g, "#")
     .replace(/~\/?/g, " ");
 
   for (const [token, html] of htmlTokens) {
@@ -167,10 +174,15 @@ function inlineFormat(raw) {
 function collectEnvironment(lines, start, envName) {
   const collected = [];
   let index = start + 1;
-  const endPattern = new RegExp(`^\\s*\\\\end\\{${envName}\\}\\s*$`);
+  const endPattern = new RegExp(`\\\\end\\{${envName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\}`);
 
   for (; index < lines.length; index += 1) {
-    if (endPattern.test(lines[index])) {
+    const endIndex = lines[index].search(endPattern);
+    if (endIndex >= 0) {
+      const beforeEnd = lines[index].slice(0, endIndex).trimEnd();
+      if (beforeEnd) {
+        collected.push(beforeEnd);
+      }
       break;
     }
     collected.push(lines[index]);
@@ -234,11 +246,12 @@ function renderLines(text) {
       continue;
     }
 
-    const begin = line.match(/^\\begin\{([A-Za-z*]+)\}(?:\[([^\]]+)\])?/);
+    const begin = line.match(/^\\begin\{([A-Za-z*]+)\}(?:\[([^\]]+)\])?(?:\{(.+)\})?/);
     if (begin) {
       flushParagraph();
       const env = begin[1];
       const label = begin[2] || "";
+      const title = begin[3] || "";
       const collected = collectEnvironment(lines, index, env);
       index = collected.next;
 
@@ -248,6 +261,11 @@ function renderLines(text) {
         output.push(renderList(collected.text, env === "enumerate"));
       } else if (env === "quote") {
         output.push(`<blockquote>${inlineFormat(collected.text.replace(/\n+/g, " "))}</blockquote>`);
+      } else if (env === "question") {
+        const heading = title ? `<p class="question-title">${inlineFormat(title)}</p>` : "";
+        output.push(`<section class="qa-card">${heading}${renderLines(collected.text)}</section>`);
+      } else if (env === "answer") {
+        output.push(`<p class="answer-line"><strong>答案：</strong>${inlineFormat(collected.text.replace(/\n+/g, " "))}</p>`);
       } else if (["theorem", "lemma", "definition", "proposition", "corollary"].includes(env)) {
         const name = label ? ` (${inlineFormat(label)})` : "";
         output.push(`<div class="theorem"><strong>${env[0].toUpperCase()}${env.slice(1)}${name}.</strong> ${renderLines(collected.text)}</div>`);

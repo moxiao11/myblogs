@@ -617,6 +617,15 @@ a:hover {
   margin: 1em 0;
 }
 
+.article ol,
+.article ul {
+  padding-left: 1.35rem;
+}
+
+.article li {
+  margin: 0.3em 0;
+}
+
 .article img {
   max-width: 100%;
   border-radius: 12px;
@@ -643,6 +652,37 @@ blockquote {
 .proof {
   border-left-color: var(--amber);
   background: #fff9ed;
+}
+
+.qa-card {
+  background: #fff;
+  border: 1px solid rgba(13, 148, 136, 0.18);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(24, 32, 47, 0.05);
+  margin: 18px 0;
+  padding: 16px 18px;
+}
+
+.question-title {
+  color: var(--text);
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.qa-card ol,
+.qa-card ul {
+  margin: 8px 0 0;
+}
+
+.answer-line {
+  align-items: baseline;
+  background: rgba(13, 148, 136, 0.08);
+  border-radius: 8px;
+  color: #0f766e;
+  display: flex;
+  gap: 6px;
+  margin: -8px 0 20px;
+  padding: 8px 12px;
 }
 
 pre {
