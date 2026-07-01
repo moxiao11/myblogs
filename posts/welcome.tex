@@ -1,0 +1,54 @@
+% ---
+% title: 用 LaTeX 写博客的第一篇文章
+% date: 2026-07-01
+% author: Crystal-Sky
+% tags: LaTeX, Blog, MathJax
+% summary: 这是一篇示例文章，展示如何在新的个人博客里使用 LaTeX 结构、数学公式、定理和证明。
+% ---
+
+\section{为什么要独立建站}
+
+博客园适合快速发布 Markdown 笔记，但当文章里有大量公式、定理环境、推导过程和需要长期维护的知识结构时，使用 \LaTeX 写作会更自然。这个站点把文章源文件放在 `posts/*.tex`，构建时生成静态 HTML，再交给 GitHub Pages 或其他静态服务部署。
+
+\begin{abstract}
+这个示例展示了文章元信息、章节、行内公式、展示公式、定理环境、列表和代码块。
+\end{abstract}
+
+\section{数学公式}
+
+行内公式可以写成 $e^{i\pi}+1=0$，展示公式可以写成：
+
+\[
+  \sum_{k=1}^{n} k = \frac{n(n+1)}{2}.
+\]
+
+也可以使用 `align` 环境：
+
+\begin{align}
+  (a+b)^2 &= a^2 + 2ab + b^2,\\
+  (a-b)^2 &= a^2 - 2ab + b^2.
+\end{align}
+
+\section{定理与证明}
+
+\begin{theorem}[等式的平移]
+若 $a=b$，则对任意 $c$，都有 $a+c=b+c$。
+\end{theorem}
+
+\begin{proof}
+根据等式的基本性质，在等式两边同时加上同一个量 $c$，等式仍然成立。
+\end{proof}
+
+\section{列表与代码}
+
+\begin{itemize}
+\item 在 `posts` 目录中写 `.tex` 文章。
+\item 运行 `npm run build` 生成静态网站。
+\item 推送到 GitHub 后由 Actions 自动部署。
+\end{itemize}
+
+\begin{verbatim}
+npm run new "新的文章标题"
+npm run dev
+npm run build
+\end{verbatim}

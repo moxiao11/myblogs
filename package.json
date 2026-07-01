@@ -1,0 +1,15 @@
+{
+  "name": "crystal-sky-blog",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A static LaTeX-first blog for Crystal Sky.",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "dev": "node scripts/serve.js",
+    "new": "node scripts/new-post.js",
+    "check": "node --check scripts/build.js && node --check scripts/serve.js && node --check scripts/new-post.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
