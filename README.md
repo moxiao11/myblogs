@@ -58,6 +58,17 @@ npm run build
 
 如果你使用自定义域名，在仓库的 Pages 设置里添加域名；也可以在 `dist/` 生成阶段加入 `CNAME` 文件。
 
+当前自定义域名配置为：
+
+```text
+ustbcode.top
+```
+
+DNS 解析建议：
+
+- 根域名 `ustbcode.top`：添加 4 条 `A` 记录，主机记录为 `@`，记录值分别为 GitHub Pages 的 4 个 IPv4 地址。
+- 可选 `www.ustbcode.top`：添加 1 条 `CNAME` 记录，主机记录为 `www`，记录值为 `moxiao11.github.io`。
+
 ## 从博客园迁移
 
 博客园旧站链接已经放进站点导航：<https://www.cnblogs.com/Crystal-Sky>。后续可以把旧文章逐篇转成 `.tex` 或 Markdown/LaTeX 混写，再放入 `posts/` 统一发布。

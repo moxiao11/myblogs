@@ -457,6 +457,11 @@ function copyAssets() {
       fs.copyFileSync(from, to);
     }
   }
+
+  const cnamePath = path.join(root, "CNAME");
+  if (fs.existsSync(cnamePath)) {
+    fs.copyFileSync(cnamePath, path.join(distDir, "CNAME"));
+  }
 }
 
 function loadPosts() {
