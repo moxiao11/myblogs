@@ -196,7 +196,10 @@ function renderList(raw, ordered) {
     .split(/\\item/g)
     .map((item) => item.trim())
     .filter(Boolean)
-    .map((item) => `<li>${inlineFormat(item.replace(/\n+/g, " "))}</li>`)
+    .map((item, index) => {
+      const option = ordered ? ` data-option="${String.fromCharCode(65 + index)}" tabindex="0"` : "";
+      return `<li${option}>${inlineFormat(item.replace(/\n+/g, " "))}</li>`;
+    })
     .join("");
   return `<${ordered ? "ol" : "ul"}>${items}</${ordered ? "ol" : "ul"}>`;
 }

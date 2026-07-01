@@ -121,6 +121,147 @@
     `;
   }
 
+  function setupQuizInteractions() {
+    const cards = Array.from(document.querySelectorAll(".qa-card"));
+    if (!cards.length) {
+      return;
+    }
+
+    const answerPattern = /(?:^|[，,、\s：:])([A-D])(?=（|\(|$|[，,、\s])/g;
+
+    const selectedOptions = (options) => {
+      return options
+        .filter((option) => option.classList.contains("is-selected"))
+        .map((option) => option.dataset.option)
+        .filter(Boolean)
+        .sort();
+    };
+
+    const sameOptions = (left, right) => {
+      return left.length === right.length && left.every((value, index) => value === right[index]);
+    };
+
+    for (const card of cards) {
+      const answerLine = card.nextElementSibling?.classList.contains("answer-line") ? card.nextElementSibling : null;
+      if (!answerLine) {
+        continue;
+      }
+
+      const answerText = answerLine.textContent.replace(/^答案[:：]\s*/, "").trim();
+      const correct = [...answerText.matchAll(answerPattern)]
+        .map((match) => match[1])
+        .filter((value, index, all) => all.indexOf(value) === index)
+        .sort();
+      const options = Array.from(card.querySelectorAll("[data-option]"));
+      const controls = document.createElement("div");
+      const status = document.createElement("p");
+      const submit = document.createElement("button");
+      const reveal = document.createElement("button");
+      const reset = document.createElement("button");
+      const isMultiple = correct.length > 1;
+
+      answerLine.hidden = true;
+      card.classList.add("is-interactive");
+      status.className = "quiz-status";
+      status.setAttribute("aria-live", "polite");
+      submit.className = "quiz-button";
+      submit.type = "button";
+      submit.textContent = "提交答案";
+      submit.hidden = !isMultiple || !options.length;
+      reveal.className = "quiz-button quiz-button-secondary";
+      reveal.type = "button";
+      reveal.textContent = options.length ? "显示答案" : "显示答案";
+      reset.className = "quiz-button quiz-button-secondary";
+      reset.type = "button";
+      reset.textContent = "重做";
+      reset.hidden = !options.length;
+      controls.className = "quiz-controls";
+      controls.append(submit, reveal, reset, status);
+      card.appendChild(controls);
+
+      const clearResult = () => {
+        card.classList.remove("quiz-correct", "quiz-wrong", "answer-revealed");
+        answerLine.hidden = true;
+        status.textContent = "";
+        for (const option of options) {
+          option.classList.remove("is-selected", "is-correct-option", "is-wrong-option");
+          option.setAttribute("aria-pressed", "false");
+        }
+      };
+
+      const showAnswer = () => {
+        answerLine.hidden = false;
+        card.classList.add("answer-revealed");
+        for (const option of options) {
+          if (correct.includes(option.dataset.option)) {
+            option.classList.add("is-correct-option");
+          }
+        }
+      };
+
+      const evaluate = () => {
+        const selected = selectedOptions(options);
+        if (options.length && selected.length === 0) {
+          status.textContent = "请选择选项";
+          return;
+        }
+
+        const isCorrect = sameOptions(selected, correct);
+        card.classList.toggle("quiz-correct", isCorrect);
+        card.classList.toggle("quiz-wrong", !isCorrect);
+        showAnswer();
+
+        for (const option of options) {
+          const optionName = option.dataset.option;
+          option.classList.toggle("is-correct-option", correct.includes(optionName));
+          option.classList.toggle("is-wrong-option", selected.includes(optionName) && !correct.includes(optionName));
+        }
+
+        status.textContent = isCorrect ? "回答正确" : "回答错误";
+      };
+
+      for (const option of options) {
+        option.setAttribute("role", "button");
+        option.setAttribute("aria-pressed", "false");
+        option.addEventListener("click", () => {
+          if (!isMultiple) {
+            for (const other of options) {
+              other.classList.remove("is-selected", "is-correct-option", "is-wrong-option");
+              other.setAttribute("aria-pressed", "false");
+            }
+          }
+
+          option.classList.toggle("is-selected");
+          option.setAttribute("aria-pressed", String(option.classList.contains("is-selected")));
+
+          if (isMultiple) {
+            card.classList.remove("quiz-correct", "quiz-wrong");
+            answerLine.hidden = true;
+            for (const current of options) {
+              current.classList.remove("is-correct-option", "is-wrong-option");
+            }
+            status.textContent = `已选择 ${selectedOptions(options).join("、") || "无"}`;
+          } else {
+            evaluate();
+          }
+        });
+        option.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            option.click();
+          }
+        });
+      }
+
+      submit.addEventListener("click", evaluate);
+      reveal.addEventListener("click", () => {
+        showAnswer();
+        status.textContent = options.length ? "已显示正确答案" : "";
+      });
+      reset.addEventListener("click", clearResult);
+    }
+  }
+
   function setupClickWords() {
     if (prefersReducedMotion) {
       return;
@@ -287,6 +428,7 @@
   setupThemeSwitch();
   setupDrawerSearch();
   setupCalendar();
+  setupQuizInteractions();
   setupClickWords();
   setupTypewriter();
   setupParticleLines();
