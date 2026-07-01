@@ -262,6 +262,266 @@
     }
   }
 
+  function setupChallengeMode() {
+    const startButton = document.querySelector("[data-challenge-start]");
+    const cards = Array.from(document.querySelectorAll(".qa-card"));
+    if (!startButton || !cards.length) {
+      return;
+    }
+
+    const answerPattern = /(?:^|[，,、\s：:])([A-D])(?=（|\(|$|[，,、\s])/g;
+    const normalizeAnswer = (value) => {
+      return String(value)
+        .trim()
+        .replace(/[，,、；;]+/g, " ")
+        .replace(/\s+/g, " ")
+        .toLowerCase();
+    };
+    const uniqueSorted = (values) => {
+      return values.filter((value, index, all) => value && all.indexOf(value) === index).sort();
+    };
+    const sameOptions = (left, right) => {
+      return left.length === right.length && left.every((value, index) => value === right[index]);
+    };
+    const splitFillAnswers = (answerText, blankCount) => {
+      const tokens = answerText.split(/\s+/).map((item) => item.trim()).filter(Boolean);
+      if (blankCount > 1 && tokens.length === blankCount) {
+        return tokens;
+      }
+      if (tokens.length > 1 && tokens.every((token) => token.length <= 2)) {
+        return tokens;
+      }
+      return [answerText.trim()];
+    };
+
+    const questions = cards.map((card, index) => {
+      const answerLine = card.nextElementSibling?.classList.contains("answer-line") ? card.nextElementSibling : null;
+      const answerText = answerLine ? answerLine.textContent.replace(/^答案[:：]\s*/, "").trim() : "";
+      const options = Array.from(card.querySelectorAll("[data-option]")).map((option) => ({
+        key: option.dataset.option,
+        text: option.textContent.trim()
+      }));
+      const correctOptions = uniqueSorted([...answerText.matchAll(answerPattern)].map((match) => match[1]));
+      const title = card.querySelector(".question-title")?.textContent.trim() || `题目 ${index + 1}`;
+      const blankCount = Math.max(1, (title.match(/_{2,}/g) || []).length);
+      return {
+        answerText,
+        blankCount,
+        correctOptions,
+        fillAnswers: splitFillAnswers(answerText, blankCount),
+        index,
+        options,
+        title,
+        type: options.length ? "choice" : "fill"
+      };
+    });
+
+    let order = [];
+    let currentIndex = 0;
+    let score = 0;
+    let answered = false;
+    let currentQuestion = null;
+    let selected = [];
+
+    const overlay = document.createElement("div");
+    overlay.className = "challenge-overlay";
+    overlay.hidden = true;
+    overlay.innerHTML = `
+      <section class="challenge-panel" role="dialog" aria-modal="true" aria-labelledby="challenge-title">
+        <button class="challenge-close" data-challenge-close type="button" aria-label="关闭">×</button>
+        <div class="challenge-head">
+          <div>
+            <span class="challenge-kicker">一站到底</span>
+            <h2 id="challenge-title">随机刷题</h2>
+          </div>
+          <span class="challenge-progress" data-challenge-progress></span>
+        </div>
+        <div class="challenge-body" data-challenge-body></div>
+        <div class="challenge-result" data-challenge-result aria-live="polite"></div>
+        <div class="challenge-actions">
+          <button class="quiz-button" data-challenge-confirm type="button">确认</button>
+          <button class="quiz-button quiz-button-secondary" data-challenge-next type="button" hidden>下一题</button>
+          <button class="quiz-button quiz-button-secondary" data-challenge-restart type="button" hidden>重新开始</button>
+        </div>
+      </section>
+    `;
+    document.body.appendChild(overlay);
+
+    const body = overlay.querySelector("[data-challenge-body]");
+    const result = overlay.querySelector("[data-challenge-result]");
+    const progress = overlay.querySelector("[data-challenge-progress]");
+    const confirmButton = overlay.querySelector("[data-challenge-confirm]");
+    const nextButton = overlay.querySelector("[data-challenge-next]");
+    const restartButton = overlay.querySelector("[data-challenge-restart]");
+    const closeButton = overlay.querySelector("[data-challenge-close]");
+
+    const shuffle = (items) => {
+      const copy = [...items];
+      for (let index = copy.length - 1; index > 0; index -= 1) {
+        const swap = Math.floor(Math.random() * (index + 1));
+        [copy[index], copy[swap]] = [copy[swap], copy[index]];
+      }
+      return copy;
+    };
+
+    const open = () => {
+      order = shuffle(questions);
+      currentIndex = 0;
+      score = 0;
+      overlay.hidden = false;
+      document.body.classList.add("challenge-open");
+      renderQuestion();
+    };
+
+    const close = () => {
+      overlay.hidden = true;
+      document.body.classList.remove("challenge-open");
+    };
+
+    const optionButton = (option) => {
+      return `<button class="challenge-option" data-challenge-option="${option.key}" type="button"><strong>${option.key}.</strong> ${option.text}</button>`;
+    };
+
+    const fillInput = (_answer, index) => {
+      return `<label class="challenge-fill"><span>第 ${index + 1} 空</span><input data-challenge-fill="${index}" type="text" autocomplete="off"></label>`;
+    };
+
+    const renderQuestion = () => {
+      answered = false;
+      selected = [];
+      currentQuestion = order[currentIndex];
+      progress.textContent = `${currentIndex + 1} / ${order.length}`;
+      result.textContent = "";
+      result.className = "challenge-result";
+      confirmButton.hidden = false;
+      nextButton.hidden = true;
+      restartButton.hidden = true;
+      confirmButton.textContent = "确认";
+
+      if (currentQuestion.type === "choice") {
+        const multiple = currentQuestion.correctOptions.length > 1;
+        body.innerHTML = `
+          <p class="challenge-question">${currentQuestion.title}</p>
+          <p class="challenge-hint">${multiple ? "多选题：可选择多个选项" : "选择一个选项"}</p>
+          <div class="challenge-options">${currentQuestion.options.map(optionButton).join("")}</div>
+        `;
+      } else {
+        body.innerHTML = `
+          <p class="challenge-question">${currentQuestion.title}</p>
+          <p class="challenge-hint">填空题：按空填写，大小写不敏感</p>
+          <div class="challenge-fills">${currentQuestion.fillAnswers.map(fillInput).join("")}</div>
+        `;
+      }
+    };
+
+    const showResult = (isCorrect, detail) => {
+      answered = true;
+      if (isCorrect) {
+        score += 1;
+      }
+      result.className = `challenge-result ${isCorrect ? "is-correct" : "is-wrong"}`;
+      result.innerHTML = `<strong>${isCorrect ? "回答正确" : "回答错误"}</strong><span>${detail}</span><span>标准答案：${currentQuestion.answerText}</span>`;
+      confirmButton.hidden = true;
+      nextButton.hidden = false;
+      nextButton.textContent = currentIndex + 1 >= order.length ? "查看成绩" : "下一题";
+    };
+
+    const confirmChoice = () => {
+      if (!selected.length) {
+        result.className = "challenge-result is-wrong";
+        result.textContent = "请选择选项";
+        return;
+      }
+      const userAnswer = uniqueSorted(selected);
+      const isCorrect = sameOptions(userAnswer, currentQuestion.correctOptions);
+      showResult(isCorrect, `你的答案：${userAnswer.join("、")}`);
+      for (const option of overlay.querySelectorAll("[data-challenge-option]")) {
+        const key = option.dataset.challengeOption;
+        option.classList.toggle("is-correct-option", currentQuestion.correctOptions.includes(key));
+        option.classList.toggle("is-wrong-option", userAnswer.includes(key) && !currentQuestion.correctOptions.includes(key));
+      }
+    };
+
+    const confirmFill = () => {
+      const inputs = Array.from(overlay.querySelectorAll("[data-challenge-fill]"));
+      const userAnswers = inputs.map((input) => input.value.trim());
+      if (userAnswers.some((value) => !value)) {
+        result.className = "challenge-result is-wrong";
+        result.textContent = "请先填完所有空";
+        return;
+      }
+      const expected = currentQuestion.fillAnswers.map(normalizeAnswer);
+      const actual = userAnswers.map(normalizeAnswer);
+      const isCorrect = sameOptions(actual, expected);
+      showResult(isCorrect, `你的答案：${userAnswers.join(" / ")}`);
+      inputs.forEach((input, index) => {
+        input.classList.toggle("is-correct-fill", normalizeAnswer(input.value) === expected[index]);
+        input.classList.toggle("is-wrong-fill", normalizeAnswer(input.value) !== expected[index]);
+      });
+    };
+
+    const showScore = () => {
+      currentQuestion = null;
+      progress.textContent = `${order.length} / ${order.length}`;
+      body.innerHTML = `<div class="challenge-finish"><strong>完成！</strong><span>本轮得分：${score} / ${order.length}</span></div>`;
+      result.textContent = "";
+      result.className = "challenge-result";
+      confirmButton.hidden = true;
+      nextButton.hidden = true;
+      restartButton.hidden = false;
+    };
+
+    startButton.addEventListener("click", open);
+    closeButton.addEventListener("click", close);
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) {
+        close();
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !overlay.hidden) {
+        close();
+      }
+    });
+    body.addEventListener("click", (event) => {
+      const option = event.target.closest("[data-challenge-option]");
+      if (!option || answered || currentQuestion?.type !== "choice") {
+        return;
+      }
+      const key = option.dataset.challengeOption;
+      const multiple = currentQuestion.correctOptions.length > 1;
+      if (!multiple) {
+        for (const button of body.querySelectorAll("[data-challenge-option]")) {
+          button.classList.remove("is-selected");
+        }
+        selected = [key];
+        option.classList.add("is-selected");
+        return;
+      }
+      option.classList.toggle("is-selected");
+      selected = Array.from(body.querySelectorAll(".is-selected")).map((button) => button.dataset.challengeOption);
+    });
+    confirmButton.addEventListener("click", () => {
+      if (!currentQuestion || answered) {
+        return;
+      }
+      if (currentQuestion.type === "choice") {
+        confirmChoice();
+      } else {
+        confirmFill();
+      }
+    });
+    nextButton.addEventListener("click", () => {
+      currentIndex += 1;
+      if (currentIndex >= order.length) {
+        showScore();
+      } else {
+        renderQuestion();
+      }
+    });
+    restartButton.addEventListener("click", open);
+  }
+
   function setupClickWords() {
     if (prefersReducedMotion) {
       return;
@@ -429,6 +689,7 @@
   setupDrawerSearch();
   setupCalendar();
   setupQuizInteractions();
+  setupChallengeMode();
   setupClickWords();
   setupTypewriter();
   setupParticleLines();

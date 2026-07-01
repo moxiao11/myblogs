@@ -503,6 +503,8 @@ function renderPost(post) {
   const headings = extractHeadings(post.html);
   const pdfUrl = articleAssetUrl(post.pdf);
   const pdfButton = pdfUrl ? `<a class="pdf-download" href="${escapeAttr(pdfUrl)}" download>下载 PDF</a>` : "";
+  const challengeButton = post.html.includes("qa-card") ? `<button class="quiz-challenge-start" data-challenge-start type="button">一站到底</button>` : "";
+  const actionButtons = `${challengeButton}${pdfButton}`;
   const bookmarks = headings.map((heading) => {
     return `<a class="toc-level-${heading.level}" href="#${escapeAttr(heading.id)}">${escapeHtml(heading.title)}</a>`;
   }).join("");
@@ -522,7 +524,7 @@ function renderPost(post) {
         <span>${post.minutes} min read</span>
         ${tags}
       </div>
-      ${pdfButton ? `<div class="article-actions">${pdfButton}</div>` : ""}
+      ${actionButtons ? `<div class="article-actions">${actionButtons}</div>` : ""}
     </header>
     ${post.html}
   </article>
