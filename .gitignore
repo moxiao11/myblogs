@@ -5,3 +5,6 @@ dist/
 .env
 cnblogs-home.html
 cnblogs-custom.css
+cnblogs-news.html
+cnblogs-sidecolumn.html
+simpleMemory.css

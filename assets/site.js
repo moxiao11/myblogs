@@ -31,6 +31,96 @@
     });
   }
 
+  function setupDrawer() {
+    const toggle = document.querySelector("[data-menu-toggle]");
+    const closeButtons = Array.from(document.querySelectorAll("[data-menu-close]"));
+    const backdrop = document.querySelector(".drawer-backdrop");
+    const drawer = document.querySelector(".site-drawer");
+
+    if (!toggle || !drawer || !backdrop) {
+      return;
+    }
+
+    const setOpen = (open) => {
+      document.body.classList.toggle("drawer-open", open);
+      toggle.setAttribute("aria-expanded", String(open));
+      drawer.setAttribute("aria-hidden", String(!open));
+      backdrop.hidden = !open;
+    };
+
+    toggle.addEventListener("click", () => {
+      setOpen(!document.body.classList.contains("drawer-open"));
+    });
+
+    for (const button of closeButtons) {
+      button.addEventListener("click", () => setOpen(false));
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    });
+  }
+
+  function setupThemeSwitch() {
+    const toggle = document.querySelector("[data-theme-toggle]");
+    if (!toggle) {
+      return;
+    }
+
+    toggle.addEventListener("click", () => {
+      document.body.classList.toggle("theme-dim");
+    });
+  }
+
+  function setupDrawerSearch() {
+    const drawerInput = document.querySelector("[data-drawer-search]");
+    const pageInput = document.querySelector("[data-search]");
+
+    if (!drawerInput || !pageInput) {
+      return;
+    }
+
+    drawerInput.addEventListener("input", () => {
+      pageInput.value = drawerInput.value;
+      pageInput.dispatchEvent(new Event("input"));
+      document.querySelector("#posts")?.scrollIntoView({ behavior: "smooth" });
+    });
+  }
+
+  function setupCalendar() {
+    const mount = document.querySelector("[data-calendar]");
+    if (!mount) {
+      return;
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const first = new Date(year, month, 1);
+    const days = new Date(year, month + 1, 0).getDate();
+    const offset = first.getDay();
+    const labels = ["日", "一", "二", "三", "四", "五", "六"];
+    const cells = [];
+
+    for (const label of labels) {
+      cells.push(`<strong>${label}</strong>`);
+    }
+    for (let index = 0; index < offset; index += 1) {
+      cells.push("<span></span>");
+    }
+    for (let day = 1; day <= days; day += 1) {
+      const className = day === now.getDate() ? "calendar-today" : "";
+      cells.push(`<span class="${className}">${day}</span>`);
+    }
+
+    mount.innerHTML = `
+      <div class="calendar-head"><span>‹</span><strong>${year}年${month + 1}月</strong><span>›</span></div>
+      <div class="calendar-grid">${cells.join("")}</div>
+    `;
+  }
+
   function setupClickWords() {
     if (prefersReducedMotion) {
       return;
@@ -58,7 +148,7 @@
       return;
     }
 
-    const title = document.querySelector(".intro h1");
+    const title = document.querySelector(".home-hero h1");
     if (!title || title.dataset.typed === "true") {
       return;
     }
@@ -193,6 +283,10 @@
   }
 
   setupSearch();
+  setupDrawer();
+  setupThemeSwitch();
+  setupDrawerSearch();
+  setupCalendar();
   setupClickWords();
   setupTypewriter();
   setupParticleLines();

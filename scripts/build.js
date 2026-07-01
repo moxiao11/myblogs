@@ -303,6 +303,7 @@ function fullUrl(pathname) {
 
 function pageShell({ title, description, body, pageClass = "" }) {
   const pageTitle = title === site.title ? site.title : `${title} | ${site.title}`;
+  const assetPrefix = pageClass === "article-page" ? "../" : "";
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -310,7 +311,7 @@ function pageShell({ title, description, body, pageClass = "" }) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(pageTitle)}</title>
   <meta name="description" content="${escapeAttr(description || site.description)}">
-  <link rel="stylesheet" href="${pageClass === "article-page" ? "../assets/styles.css" : "assets/styles.css"}">
+  <link rel="stylesheet" href="${assetPrefix}assets/styles.css">
   <script>
     window.MathJax = {
       tex: {
@@ -324,11 +325,56 @@ function pageShell({ title, description, body, pageClass = "" }) {
   <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 </head>
 <body class="${pageClass}">
+  <button class="menu-button" data-menu-toggle type="button" aria-controls="site-drawer" aria-expanded="false">
+    <span aria-hidden="true">☰</span>
+    <span>MENU</span>
+  </button>
+  <button class="theme-switch" data-theme-toggle type="button" aria-label="切换背景亮度">
+    <span class="theme-switch-sky"></span>
+    <span class="theme-switch-orb"></span>
+  </button>
+  <div class="drawer-backdrop" data-menu-close hidden></div>
+  <aside class="site-drawer" id="site-drawer" aria-hidden="true">
+    <div class="drawer-title">
+      <span>欢迎来到我的博客</span>
+      <button data-menu-close type="button" aria-label="关闭菜单">×</button>
+    </div>
+    <div class="drawer-profile">
+      <img src="${assetPrefix}assets/avatar.png" alt="莫枭">
+      <div>
+        <div>昵称：莫枭</div>
+        <div>园龄：2个月</div>
+        <div>粉丝：0</div>
+        <div>关注：0</div>
+      </div>
+    </div>
+    <div class="drawer-stats">随笔 - 6&nbsp;&nbsp;文章 - 0&nbsp;&nbsp;评论 - 0&nbsp;&nbsp;阅读 - 297</div>
+    <label class="drawer-search">
+      <span class="sr-only">搜索文章</span>
+      <input data-drawer-search type="search" placeholder="找找看...">
+      <span aria-hidden="true">⌕</span>
+    </label>
+    <nav class="drawer-nav" aria-label="侧边栏菜单">
+      <a href="${assetPrefix}index.html"><span>⌂</span><strong>首页</strong><em>i</em></a>
+      <a href="https://www.cnblogs.com/Crystal-Sky/category/algorithm.html"><span>⌘</span><strong>算法竞赛</strong><em>ii</em></a>
+      <a href="https://www.cnblogs.com/Crystal-Sky/category/2503943.html"><span>▣</span><strong>操作系统</strong><em>iii</em></a>
+      <a href="https://www.cnblogs.com/Crystal-Sky/category/frontend.html"><span>▤</span><strong>前端开发</strong><em>iv</em></a>
+      <a href="https://www.cnblogs.com/Crystal-Sky/archive.html"><span>☑</span><strong>随笔归档</strong><em>v</em></a>
+      <a href="https://github.com/moxiao11/myblogs"><span>⚙</span><strong>管理后台</strong><em>vi</em></a>
+    </nav>
+    <div class="drawer-calendar" data-calendar></div>
+    <div class="drawer-bottom">
+      <a href="${assetPrefix}index.html">⌂ 首页</a>
+      <a href="https://www.cnblogs.com/Crystal-Sky">➤ 联系</a>
+      <a href="${assetPrefix}feed.xml">❤ 订阅</a>
+      <a href="https://github.com/moxiao11/myblogs">⚙ 管理</a>
+    </div>
+  </aside>
   <div class="site-shell">
     <header class="site-header">
       <div class="header-inner">
         <a class="brand" href="${pageClass === "article-page" ? "../index.html" : "index.html"}">
-          <img src="${pageClass === "article-page" ? "../assets/crystal-sky.svg" : "assets/crystal-sky.svg"}" alt="">
+          <img src="${assetPrefix}assets/crystal-sky.svg" alt="">
           <span><strong>${escapeHtml(site.title)}</strong><span>${escapeHtml(site.subtitle)}</span></span>
         </a>
         <nav class="nav-links" aria-label="Primary">
@@ -343,7 +389,7 @@ function pageShell({ title, description, body, pageClass = "" }) {
       <div class="footer-inner">Copyright ${new Date().getFullYear()} ${escapeHtml(site.author)}. Built from LaTeX sources.</div>
     </footer>
   </div>
-  <script src="${pageClass === "article-page" ? "../assets/site.js" : "assets/site.js"}"></script>
+  <script src="${assetPrefix}assets/site.js"></script>
 </body>
 </html>`;
 }
@@ -363,15 +409,15 @@ function renderIndex(posts) {
 </a>`;
   }).join("\n");
 
-  const body = `<main class="main-grid">
+  const body = `<section class="home-hero" id="top">
+  <div class="hero-content">
+    <h1>${escapeHtml(site.title)}</h1>
+    <p>愿你历经山河，仍觉人间值得</p>
+  </div>
+  <a class="scroll-down" href="#posts" aria-label="查看文章">⌄</a>
+</section>
+<main class="main-grid" id="posts">
   <section>
-    <div class="intro">
-      <div>
-        <h1>${escapeHtml(site.title)}</h1>
-        <p>${escapeHtml(site.description)}这里会收纳数学推导、算法笔记、课程记录和一些长期可复用的想法。</p>
-      </div>
-      <img src="assets/crystal-sky.svg" alt="Crystal Sky">
-    </div>
     <div class="toolbar">
       <input class="search-input" data-search type="search" placeholder="搜索标题、摘要或标签" aria-label="搜索文章">
     </div>
@@ -396,7 +442,7 @@ function renderIndex(posts) {
   </aside>
 </main>`;
 
-  return pageShell({ title: site.title, description: site.description, body });
+  return pageShell({ title: site.title, description: site.description, body, pageClass: "home-page" });
 }
 
 function renderPost(post) {
