@@ -3,6 +3,7 @@ dist/
 .DS_Store
 *.log
 .env
+tmp/
 cnblogs-home.html
 cnblogs-custom.css
 cnblogs-news.html

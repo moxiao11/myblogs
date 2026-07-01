@@ -297,6 +297,37 @@ function readingTime(html) {
   return Math.max(1, Math.ceil((cjk / 350 + latin / 220) || 1));
 }
 
+function plainTextFromHtml(html) {
+  return String(html)
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractHeadings(html) {
+  return [...String(html).matchAll(/<h([2-4]) id="([^"]+)">([\s\S]*?)<\/h\1>/g)]
+    .map((match) => ({
+      level: Number(match[1]),
+      id: match[2],
+      title: plainTextFromHtml(match[3])
+    }));
+}
+
+function articleAssetUrl(value) {
+  if (!value) {
+    return "";
+  }
+  if (/^(?:https?:)?\/\//.test(value)) {
+    return value;
+  }
+  return `../${String(value).replace(/^\/+/, "")}`;
+}
+
 function formatDate(dateValue) {
   if (!dateValue) {
     return "";
@@ -466,7 +497,19 @@ function renderIndex(posts) {
 
 function renderPost(post) {
   const tags = post.tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
-  const body = `<main class="main-grid">
+  const headings = extractHeadings(post.html);
+  const pdfUrl = articleAssetUrl(post.pdf);
+  const pdfButton = pdfUrl ? `<a class="pdf-download" href="${escapeAttr(pdfUrl)}" download>下载 PDF</a>` : "";
+  const bookmarks = headings.map((heading) => {
+    return `<a class="toc-level-${heading.level}" href="#${escapeAttr(heading.id)}">${escapeHtml(heading.title)}</a>`;
+  }).join("");
+  const bookmarkPanel = (bookmarks || pdfButton) ? `<aside class="article-toc" aria-label="文章书签">
+    <div class="article-toc-inner">
+      ${pdfButton}
+      ${bookmarks ? `<strong>文章书签</strong><nav>${bookmarks}</nav>` : ""}
+    </div>
+  </aside>` : "";
+  const body = `<main class="article-layout">
   <article class="article">
     <header class="article-header">
       <h1>${escapeHtml(post.title)}</h1>
@@ -476,9 +519,11 @@ function renderPost(post) {
         <span>${post.minutes} min read</span>
         ${tags}
       </div>
+      ${pdfButton ? `<div class="article-actions">${pdfButton}</div>` : ""}
     </header>
     ${post.html}
   </article>
+  ${bookmarkPanel}
 </main>`;
   return pageShell({ title: post.title, description: post.summary || site.description, body, pageClass: "article-page" });
 }
