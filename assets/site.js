@@ -141,6 +141,47 @@
       return left.length === right.length && left.every((value, index) => value === right[index]);
     };
 
+    const knowledgeFor = (card, answerText) => {
+      const title = card.querySelector(".question-title")?.textContent.trim() || "这道题";
+      const optionText = Array.from(card.querySelectorAll("[data-option]")).map((option) => option.textContent.trim()).join(" ");
+      const text = `${title} ${optionText} ${answerText}`;
+      const rules = [
+        [/set|list|tuple|dict|数据结构|重复元素|可变的数据类型/i, ["Python 数据结构", "set 用来表示无重复集合；list 保持顺序且可重复；tuple 通常不可变；dict 通过键值对保存数据，键不能重复。"]],
+        [/PWM|占空比|频率|高电平|低电平/i, ["PWM 参数", "PWM 重点看周期、频率和占空比。占空比是高电平时间占整个周期的比例，频率是周期的倒数。"]],
+        [/I2C|SDA|SCL|PCF8591|A\/D|D\/A|总线/i, ["I2C 与模数转换", "I2C 常用 SDA 传数据、SCL 传时钟。PCF8591 通过 I2C 完成 A/D、D/A 转换，地址和控制字是常考点。"]],
+        [/GPIO|树莓派|BOARD|BCM|40Pin|PUD|TTL/i, ["树莓派 GPIO", "GPIO 是通用输入输出接口。树莓派常见编码有 BOARD 和 BCM，设置输入、输出、上下拉时要注意参数含义。"]],
+        [/DHT11|1-Wire|单总线/i, ["传感器接口", "DHT11 使用单总线类数据接口。传感器题通常先判断接口类型，再看数据方向和电平特点。"]],
+        [/MPU6050|Gyroscope|Accelerator|姿态|陀螺仪/i, ["姿态传感器", "MPU6050 中陀螺仪用于角速度，加速度计用于线加速度；姿态解算通常要融合多类传感数据。"]],
+        [/OpenCV|cv2|imutils|图像|rotate|translate|人脸检测/i, ["图像处理", "OpenCV 和 imutils 题要抓函数名语义：translate 是平移，rotate/rotate_bound 是旋转，inRange 常用于阈值筛选。"]],
+        [/return|函数|class|range|标识符|注释|argparse|numpy|Python/i, ["Python 基础", "Python 题通常考语法边界和内置规则。遇到代码题时先看表达式求值顺序，再看返回值或对象类型。"]],
+        [/焊|SMT|回流焊|润湿|刮板|AOI|贴片|电烙铁/i, ["电子工艺", "焊接与 SMT 题常围绕工艺流程、温度、润湿角和检测流程。记流程顺序比死记单个词更稳。"]],
+        [/电阻|电容|二极管|LED|肖特基|电感/i, ["基础元器件", "元器件题先判断单位、极性、作用和典型应用。二极管与 LED 还要注意导通条件和限流保护。"]],
+        [/传感器|压电|热敏|光敏|湿度|超声波/i, ["传感器原理", "传感器题要把被测物理量、转换效应和输出信号对应起来，例如压电效应用于力或振动到电信号的转换。"]],
+        [/MQTT|阿里云|物联网|三元组|网络模型/i, ["物联网通信", "物联网题常考层次模型、设备三元组和通信协议。MQTT 采用发布/订阅机制，适合轻量级消息传输。"]]
+      ];
+      const matched = rules.find(([pattern]) => pattern.test(text));
+      if (matched) {
+        return matched[1];
+      }
+      return ["知识点提示", "这题的核心是把题干关键词和标准答案建立对应关系。复盘时可以把易混概念单独整理成一行对照。"];
+    };
+
+    const removeKnowledge = (card) => {
+      card.querySelector("[data-knowledge-card]")?.remove();
+      card.classList.remove("has-knowledge-card");
+    };
+
+    const showKnowledge = (card, answerText) => {
+      removeKnowledge(card);
+      const [heading, description] = knowledgeFor(card, answerText);
+      const note = document.createElement("aside");
+      note.className = "knowledge-card";
+      note.dataset.knowledgeCard = "true";
+      note.innerHTML = `<span>知识点</span><strong>${heading}</strong><p>${description}</p>`;
+      card.appendChild(note);
+      card.classList.add("has-knowledge-card");
+    };
+
     for (const card of cards) {
       const answerLine = card.nextElementSibling?.classList.contains("answer-line") ? card.nextElementSibling : null;
       if (!answerLine) {
@@ -183,6 +224,7 @@
         card.classList.remove("quiz-correct", "quiz-wrong", "answer-revealed");
         answerLine.hidden = true;
         status.textContent = "";
+        removeKnowledge(card);
         for (const option of options) {
           option.classList.remove("is-selected", "is-correct-option", "is-wrong-option");
           option.setAttribute("aria-pressed", "false");
@@ -197,6 +239,7 @@
             option.classList.add("is-correct-option");
           }
         }
+        showKnowledge(card, answerText);
       };
 
       const evaluate = () => {
@@ -237,6 +280,7 @@
           if (isMultiple) {
             card.classList.remove("quiz-correct", "quiz-wrong");
             answerLine.hidden = true;
+            removeKnowledge(card);
             for (const current of options) {
               current.classList.remove("is-correct-option", "is-wrong-option");
             }
