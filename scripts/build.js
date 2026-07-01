@@ -304,6 +304,7 @@ function fullUrl(pathname) {
 function pageShell({ title, description, body, pageClass = "" }) {
   const pageTitle = title === site.title ? site.title : `${title} | ${site.title}`;
   const assetPrefix = pageClass === "article-page" ? "../" : "";
+  const assetVersion = (process.env.GITHUB_SHA || String(Date.now())).slice(0, 12);
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -311,7 +312,7 @@ function pageShell({ title, description, body, pageClass = "" }) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(pageTitle)}</title>
   <meta name="description" content="${escapeAttr(description || site.description)}">
-  <link rel="stylesheet" href="${assetPrefix}assets/styles.css">
+  <link rel="stylesheet" href="${assetPrefix}assets/styles.css?v=${assetVersion}">
   <script>
     window.MathJax = {
       tex: {
@@ -389,7 +390,7 @@ function pageShell({ title, description, body, pageClass = "" }) {
       <div class="footer-inner">Copyright ${new Date().getFullYear()} ${escapeHtml(site.author)}. Built from LaTeX sources.</div>
     </footer>
   </div>
-  <script src="${assetPrefix}assets/site.js"></script>
+  <script src="${assetPrefix}assets/site.js?v=${assetVersion}"></script>
 </body>
 </html>`;
 }
