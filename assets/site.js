@@ -363,6 +363,7 @@
     let order = [];
     let currentIndex = 0;
     let score = 0;
+    let wrongCount = 0;
     let answered = false;
     let currentQuestion = null;
     let selected = [];
@@ -378,7 +379,10 @@
             <span class="challenge-kicker">一站到底</span>
             <h2 id="challenge-title">随机刷题</h2>
           </div>
-          <span class="challenge-progress" data-challenge-progress></span>
+          <div class="challenge-meta" aria-live="polite">
+            <span class="challenge-progress" data-challenge-progress></span>
+            <span class="challenge-score" data-challenge-score></span>
+          </div>
         </div>
         <div class="challenge-body" data-challenge-body></div>
         <div class="challenge-result" data-challenge-result aria-live="polite"></div>
@@ -394,6 +398,7 @@
     const body = overlay.querySelector("[data-challenge-body]");
     const result = overlay.querySelector("[data-challenge-result]");
     const progress = overlay.querySelector("[data-challenge-progress]");
+    const scoreBoard = overlay.querySelector("[data-challenge-score]");
     const confirmButton = overlay.querySelector("[data-challenge-confirm]");
     const nextButton = overlay.querySelector("[data-challenge-next]");
     const restartButton = overlay.querySelector("[data-challenge-restart]");
@@ -412,6 +417,7 @@
       order = shuffle(questions);
       currentIndex = 0;
       score = 0;
+      wrongCount = 0;
       overlay.hidden = false;
       document.body.classList.add("challenge-open");
       renderQuestion();
@@ -430,11 +436,16 @@
       return `<label class="challenge-fill"><span>第 ${index + 1} 空</span><input data-challenge-fill="${index}" type="text" autocomplete="off"></label>`;
     };
 
+    const updateScoreBoard = () => {
+      scoreBoard.textContent = `答对 ${score} 题 · 答错 ${wrongCount} 题`;
+    };
+
     const renderQuestion = () => {
       answered = false;
       selected = [];
       currentQuestion = order[currentIndex];
       progress.textContent = `${currentIndex + 1} / ${order.length}`;
+      updateScoreBoard();
       result.textContent = "";
       result.className = "challenge-result";
       confirmButton.hidden = false;
@@ -462,7 +473,10 @@
       answered = true;
       if (isCorrect) {
         score += 1;
+      } else {
+        wrongCount += 1;
       }
+      updateScoreBoard();
       result.className = `challenge-result ${isCorrect ? "is-correct" : "is-wrong"}`;
       result.innerHTML = `<strong>${isCorrect ? "回答正确" : "回答错误"}</strong><span>${detail}</span><span>标准答案：${currentQuestion.answerText}</span>`;
       confirmButton.hidden = true;
@@ -507,7 +521,8 @@
     const showScore = () => {
       currentQuestion = null;
       progress.textContent = `${order.length} / ${order.length}`;
-      body.innerHTML = `<div class="challenge-finish"><strong>完成！</strong><span>本轮得分：${score} / ${order.length}</span></div>`;
+      updateScoreBoard();
+      body.innerHTML = `<div class="challenge-finish"><strong>完成！</strong><span>本轮一共答对 ${score} 题，答错 ${wrongCount} 题</span><span>总题数：${order.length} 题</span></div>`;
       result.textContent = "";
       result.className = "challenge-result";
       confirmButton.hidden = true;
