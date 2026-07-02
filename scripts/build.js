@@ -204,6 +204,19 @@ function renderList(raw, ordered) {
   return `<${ordered ? "ol" : "ul"}>${items}</${ordered ? "ol" : "ul"}>`;
 }
 
+function renderImage(source, alt = "") {
+  const rawSource = String(source || "").trim();
+  if (!rawSource) {
+    return "";
+  }
+  const normalized = rawSource.replace(/^\/+/, "");
+  const src = /^(?:https?:)?\/\//.test(normalized)
+    ? normalized
+    : `../${normalized.startsWith("assets/") ? normalized : `assets/${normalized}`}`;
+  const safeAlt = alt || path.basename(normalized, path.extname(normalized));
+  return `<figure class="article-figure"><img src="${escapeAttr(src)}" alt="${escapeAttr(safeAlt)}"></figure>`;
+}
+
 function renderLines(text) {
   const lines = text.split(/\r?\n/);
   const output = [];
@@ -240,6 +253,13 @@ function renderLines(text) {
       continue;
     }
 
+    const image = line.match(/^\\includegraphics(?:\[[^\]]+\])?\{([^}]+)\}$/);
+    if (image) {
+      flushParagraph();
+      output.push(renderImage(image[1]));
+      continue;
+    }
+
     const heading = line.match(/^\\(section|subsection|subsubsection)\*?\{(.+)\}$/);
     if (heading) {
       flushParagraph();
@@ -262,6 +282,9 @@ function renderLines(text) {
         output.push(`<div class="abstract"><strong>Abstract.</strong> ${inlineFormat(collected.text.replace(/\n+/g, " "))}</div>`);
       } else if (env === "itemize" || env === "enumerate") {
         output.push(renderList(collected.text, env === "enumerate"));
+      } else if (env === "figure") {
+        const figureImage = collected.text.match(/\\includegraphics(?:\[[^\]]+\])?\{([^}]+)\}/);
+        output.push(figureImage ? renderImage(figureImage[1]) : `<figure>${renderLines(collected.text)}</figure>`);
       } else if (env === "quote") {
         output.push(`<blockquote>${inlineFormat(collected.text.replace(/\n+/g, " "))}</blockquote>`);
       } else if (env === "question") {
@@ -505,7 +528,7 @@ function renderPost(post) {
   const headings = extractHeadings(post.html);
   const pdfUrl = articleAssetUrl(post.pdf);
   const pdfButton = pdfUrl ? `<a class="pdf-download" href="${escapeAttr(pdfUrl)}" download>下载 PDF</a>` : "";
-  const challengeButton = post.html.includes("qa-card") ? `<button class="quiz-challenge-start" data-challenge-start type="button">一站到底</button>` : "";
+  const challengeButton = post.html.includes("answer-line") ? `<button class="quiz-challenge-start" data-challenge-start type="button">一站到底</button>` : "";
   const actionButtons = `${challengeButton}${pdfButton}`;
   const bookmarks = headings.map((heading) => {
     return `<a class="toc-level-${heading.level}" href="#${escapeAttr(heading.id)}">${escapeHtml(heading.title)}</a>`;

@@ -1,0 +1,316 @@
+% ---
+% title: 创新实践期末考试复盘与知识点
+% date: 2026-07-02
+% author: Crystal-Sky
+% tags: 创新实践, 期末考试, 复盘, 知识点
+% summary: 《创新实践与展示》2025-2026 学年期末考试复盘，按题型整理问题、点评和对应知识点。
+% slug: innovation-practice-final-review
+% pdf: assets/mooc-questions.pdf
+% ---
+
+\begin{abstract}
+这次考试之前，我对出题方向的判断发生了很大偏差：原本以为试卷会比较依赖 MOOC 原题，真正考出来以后才发现，PPT 里的概念、实验细节和代码片段同样重要。下面按题型把还能回忆起来的内容整理成“问题、点评、知识点”的形式，既当复盘，也当后面复习时的索引。
+\end{abstract}
+
+\section{一、单选题}
+
+单选题里有不少 MOOC 原题的影子，但也混进了不少 PPT 细节。因为没有完整记录选项，这里主要按题干方向整理。
+
+\begin{question}{1. 切换到上级目录的命令}
+\textbf{点评：} 这一题比较基础，终端里切换到上一级目录使用 \texttt{cd ..}。
+
+\textbf{知识点：} \texttt{cd} 用于切换目录，\texttt{..} 表示当前目录的上级目录。
+\end{question}
+
+\begin{question}{2. 图像形态学中的收缩与像素区域变化}
+\textbf{点评：} 这题描述有点拧巴：如果强调“收缩”，通常对应腐蚀；如果强调“区域像素增多”，又更像膨胀。考场上遇到这种题，优先抓题干的核心关键词。
+
+\textbf{知识点：} 腐蚀会让前景区域变小，常用于去除小噪声；膨胀会让前景区域变大，常用于填补空洞或连接断裂区域。
+\end{question}
+
+\begin{question}{3. Python 中的与运算}
+\textbf{点评：} 这里一定要看清题干。如果问逻辑与，答案是 \texttt{and}；如果问按位与，答案才是 \texttt{\&}。
+
+\textbf{知识点：} \texttt{and} 是逻辑运算符，判断表达式真假；\texttt{\&} 是按位与运算符，逐位处理整数的二进制位。
+\end{question}
+
+\begin{question}{4. LCD1602 英文字符的编码方式}
+\textbf{点评：} 选项里如果有二进制、十六进制、ASCII 和其他编码，比较合理的选择是 ASCII。
+
+\textbf{知识点：} LCD1602 显示英文字符时通常按字符编码写入显示数据，常见英文字符可对应 ASCII 编码。
+\end{question}
+
+\begin{question}{5. 检测物体遮挡的传感器}
+\textbf{点评：} 这题提醒我，常见传感器的“检测现象”一定要记清楚。通过遮挡光路判断是否有物体，通常对应光电传感器。
+
+\textbf{知识点：} U 型光电开关由红外发射器和接收器构成，两者位于 U 型槽两侧并形成光轴。当物体经过 U 型槽并阻断光轴时，光电开关会输出检测信号。
+\end{question}
+
+\begin{question}{6. OpenCV 色彩阈值化函数}
+\textbf{点评：} 如果刷过 MOOC 题并记住了常见 OpenCV 代码，这题应该能直接选 \texttt{cv2.inRange()}。有意思的是，后面大题里的注释似乎也把答案露出来了。
+
+\textbf{知识点：} \texttt{cv2.inRange(hsv, lower, upper)} 用于判断像素是否落在指定颜色范围内，常用于 HSV 空间下的颜色阈值分割。
+\end{question}
+
+\begin{question}{7. 人脸检测与人脸识别的区别}
+\textbf{点评：} 这题不需要深挖算法，理解两个概念的边界就够了。
+
+\textbf{知识点：} 人脸检测解决“有没有人脸、脸在哪里”的问题；人脸识别解决“这是谁的脸”的问题。
+\end{question}
+
+\begin{question}{8. 二维码解码操作的库函数}
+\textbf{点评：} 看过 PPT 的话，这题应当能想到 \texttt{pyzbar}。
+
+\textbf{知识点：} \texttt{pyzbar} 的核心解码函数是 \texttt{decode()}，可用于识别二维码、条形码等编码图像。
+\end{question}
+
+\begin{question}{9. 树莓派的主存卡类型}
+\textbf{点评：} 这个细节在比较早的 PPT 里，容易因为后面内容太多而忽略。答案一般是 TF 卡，也就是 Micro SD Card。
+
+\textbf{知识点：} 树莓派常通过 Micro SD/TF 卡安装系统并存储数据。
+\end{question}
+
+\begin{question}{10. PCF8591 的功能}
+\textbf{点评：} PCF8591 文档首页就写得很清楚：它是 8 位 A/D 和 D/A 转换器。看到相关选项可以快速锁定。
+
+\textbf{知识点：} PCF8591 是带 I2C 接口的 8 位数据采集器件，常见功能包括多路模拟输入、模拟输出和 A/D、D/A 转换。
+\end{question}
+
+\section{二、多选题}
+
+多选题是整张卷子的重灾区。最难的地方不是完全不会，而是不确定到底该不该四选，选多了又害怕。
+
+\begin{question}{1. 属于开关量类型的传感器和器件}
+\textbf{点评：} 考场上有些传感器名比较陌生，但选项里如果出现轻触开关、触摸开关、倾斜开关这类明显带“开关”属性的器件，就很可能属于开关量。
+
+\textbf{知识点：} 开关量输出通常只有两种状态，例如高/低电平、通/断、0/1。
+\end{question}
+
+\begin{question}{2. \texttt{cv2.flip(img, flipcode)} 中 \texttt{flipcode} 的含义}
+\textbf{点评：} 这题算运气好，考前刚好扫到过，所以能比较稳地判断。
+
+\textbf{知识点：} \texttt{flipcode=0} 表示沿 x 轴翻转；\texttt{flipcode>0} 表示沿 y 轴翻转；\texttt{flipcode<0} 表示 x、y 轴同时翻转。
+\end{question}
+
+\begin{question}{3. Haar 分类器的重要组成}
+\textbf{点评：} 看到这里会有点懵，尤其是连续遇到四选题时更容易怀疑自己。Haar 分类器相关内容最好按“特征、积分图、训练、级联”这一组来记。
+
+\textbf{知识点：} Haar 分类器通常包括 Haar-like 特征、积分图方法、AdaBoost 训练和级联分类器。
+\end{question}
+
+\begin{question}{4. 二维码相比一维码的优势}
+\textbf{点评：} 这题比较遗憾。我当时没理解“二维码纠错能力更强”，以为二维矩阵错一块会更难恢复。实际上二维码正是因为有纠错编码，容错能力更强。
+
+\textbf{知识点：} 一维码主要在一个方向表达信息；二维码在水平和垂直两个方向存储信息，容量更大，可表达更复杂的数据，并且通常具有更强的纠错能力。
+\end{question}
+
+\begin{question}{5. Python 循环语句}
+\textbf{点评：} 这题比较基础，循环语句就是 \texttt{for} 和 \texttt{while}。\texttt{if} 是条件判断，\texttt{break} 是循环控制语句。
+
+\textbf{知识点：} \texttt{for} 常用于遍历序列或可迭代对象；\texttt{while} 根据条件反复执行。
+\end{question}
+
+\begin{question}{6. MPU6050 的特征}
+\textbf{点评：} 这类题容易卡在细节上。只说 MPU6050 包含三轴陀螺仪和三轴加速度计并不一定错，但完整描述里还会提到数字运动处理器等内容。
+
+\textbf{知识点：} MPU6050 是 6 轴运动跟踪设备，包含三轴陀螺仪、三轴加速度计和数字运动处理器，并带有片上温度传感器。它通常通过 I2C 总线与微控制器通信，也可通过辅助 I2C 总线连接其他传感器。
+\end{question}
+
+\begin{question}{7. 图像掩码的作用}
+\textbf{点评：} 这题 PPT 上标得比较明显，考前扫到就很有帮助。
+
+\textbf{知识点：} 掩码可用于提取感兴趣区域、屏蔽无关区域、辅助结构特征提取，以及制作特殊形状图像。
+\end{question}
+
+\begin{question}{8. 图像形态学处理}
+\textbf{点评：} 这题大概率围绕腐蚀、膨胀、开运算和闭运算展开。
+
+\textbf{知识点：} 开运算通常是先腐蚀后膨胀，适合去除小噪声；闭运算通常是先膨胀后腐蚀，适合填补小孔洞。
+\end{question}
+
+\begin{question}{9. GPIO 编码方式}
+\textbf{点评：} 终于来了一个比较像 MOOC 原题的内容。
+
+\textbf{知识点：} 常见 GPIO 编码方式包括 WiringPi、BCM 和 BOARD。BOARD 使用物理引脚编号，BCM 使用 Broadcom 芯片 GPIO 编号。
+\end{question}
+
+\begin{question}{10. I2C 通信}
+\textbf{点评：} 这题像是把 MOOC 里关于起始位、终止位、数据线和时钟线的内容杂合在了一起。刷过题以后会轻松很多。
+
+\textbf{知识点：} I2C 主要使用 SDA 数据线和 SCL 时钟线；总线空闲时二者通常为高电平；起始条件为 SCL 高电平时 SDA 下降沿；终止条件为 SCL 高电平时 SDA 上升沿。
+\end{question}
+
+\section{三、填空题}
+
+填空题应该是这张卷子的最大痛点，很多内容明明选择题能判断，换成空就突然写不出来。
+
+\begin{question}{1. 等待键盘输入函数}
+\textbf{点评：} 后面判断题里甚至出现了 \texttt{cv2.waitKey()}，可以直接借来用。
+
+\textbf{知识点：} OpenCV 中常用 \texttt{cv2.waitKey()} 等待键盘输入或控制窗口刷新间隔。
+\end{question}
+
+\begin{question}{2. 树莓派开发的 SSH 工具和远程桌面工具}
+\textbf{点评：} 我当时只记住了远程桌面工具，SSH 工具没有记牢。
+
+\textbf{知识点：} 常见 SSH 工具是 PuTTY，远程桌面工具可使用 VNC Viewer。
+\end{question}
+
+\begin{question}{3. 查看 IP 地址的命令}
+\textbf{点评：} 这题比较轻松，常见答案是 \texttt{ipconfig}。
+
+\textbf{知识点：} Windows 下常用 \texttt{ipconfig} 查看网络配置信息；Linux/树莓派环境中也常见 \texttt{ifconfig} 或 \texttt{ip addr}。
+\end{question}
+
+\begin{question}{4. 树莓派供电接口与其他接口}
+\textbf{点评：} 这一题我写成了奇怪的拼写，下来翻资料才发现应该是 Type-C。其他接口可以从板载图里联想显示屏接口、摄像头接口等。
+
+\textbf{知识点：} 树莓派 4B 常见供电接口为 USB Type-C；板上还包含 GPIO、HDMI、摄像头接口、显示屏接口、网口、USB 等接口。
+\end{question}
+
+\begin{question}{5. GPIO 常态下的高低电平}
+\textbf{点评：} 这题关键是题干前提。如果是上拉输入，常态通常为高电平；如果是下拉输入，常态通常为低电平。
+
+\textbf{知识点：} Pull-up 会把输入端默认拉到高电平，按键或外部电路触发时可能变为低电平；Pull-down 会把输入端默认拉到低电平。
+\end{question}
+
+\begin{question}{6. 返回指定 pin 电平状态的函数}
+\textbf{点评：} 我猜到应当是 \texttt{GPIO.input()}，但考场上脑子一乱写成了 \texttt{output()}。
+
+\textbf{知识点：} \texttt{GPIO.input()} 用于读取某个 GPIO 当前电平状态；\texttt{GPIO.output()} 用于设置某个 GPIO 引脚输出高电平或低电平。
+\end{question}
+
+\begin{question}{7. I2C 总线上最多可接几个 PCF8591}
+\textbf{点评：} 这题刷过 MOOC 的话会比较熟，常见答案是 8 个。
+
+\textbf{知识点：} PCF8591 通过地址引脚组合改变地址，常见情况下可在同一 I2C 总线上挂接多个器件。
+\end{question}
+
+\begin{question}{8. 有源蜂鸣器与无源蜂鸣器}
+\textbf{点评：} 这题像是把定义原话挖空，记住关键词就好。
+
+\textbf{知识点：} 有源蜂鸣器内置振荡器，通常发出单一提示性报警声；无源蜂鸣器需要频率脉冲驱动，可发出不同频率的声音。
+\end{question}
+
+\begin{question}{9. HSV 的概念}
+\textbf{点评：} 考前晚上刚好问了一句，第二天就考到，属于意外捡到。
+
+\textbf{知识点：} H 表示色相/色调 Hue；S 表示饱和度 Saturation；V 或 B 表示亮度 Value/Brightness。
+\end{question}
+
+\begin{question}{10. Haar 分类器}
+\textbf{点评：} 具体题干已经记不太清，印象里考得比较死，可能要求填 Haar 分类器相关概念。
+
+\textbf{知识点：} 基于 Haar 特征分类器的对象检测技术是一种有效的对象检测方法，通常通过大量正负样本训练分类器，再用于目标检测。
+\end{question}
+
+\begin{question}{11. Python 函数定义关键字}
+\textbf{点评：} 这题属于基础题，稳住就能拿分。
+
+\textbf{知识点：} Python 使用 \texttt{def} 定义函数。
+\end{question}
+
+\begin{question}{12. 轻触开关按下和松开的高低电平}
+\textbf{点评：} 这题直接痛失两分。我把高低电平写反了，整张卷子里凡是涉及高低电平的地方都很容易翻车。
+
+\textbf{知识点：} 在常见上拉输入连接中，按键松开时检测到高电平，按键按下时接地并检测到低电平。
+\end{question}
+
+\section{四、大题}
+
+判断题没有单独整理：一是数量太多，二是很多说法只要认真刷 MOOC 就能快速判断。真正随机、细碎的部分，主要还是靠平时对 PPT 和实验代码的熟悉程度。
+
+\subsection{大题一：OpenCV 目标识别代码填空}
+
+\begin{question}{摄像头、颜色阈值、形态学与轮廓处理}
+\textbf{问题：} 题目给了一段目标识别相关代码，要求补全摄像头开启、读取图像、图像缩放、颜色空间转换、ROI 提取、腐蚀处理、边界查找、轮廓面积计算、质心查找和画圆等代码。
+
+\textbf{点评：} 前面几个空比较顺，后面两个开始折磨。特别是质心相关内容，考场上如果只记得 \texttt{find} 之类的单词，很容易写不到关键函数。
+
+\textbf{知识点：} 这类流程通常包括 \texttt{VideoStream(0).start()} 或 \texttt{cv2.VideoCapture(0)} 开启摄像头，\texttt{vs.read()} 读取帧，\texttt{cv2.cvtColor()} 转换色彩空间，\texttt{cv2.inRange()} 做颜色阈值化，形态学操作去噪，\texttt{cv2.findContours()} 查找轮廓，\texttt{cv2.moments()} 计算矩并求质心，最后用 \texttt{cv2.circle()} 标记目标。
+\end{question}
+
+\subsection{大题二：往年真题}
+
+这一题像是 2021-2022 真题的原题，基本靠背诵。
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{img1.png}
+    \label{fig:innovation-old-exam}
+\end{figure}
+
+\subsection{大题三：超声波传感器}
+
+\begin{question}{简述超声波传感器的原理以及应用场景}
+\textbf{点评：} 这题是典型概念题，重点是把“发射、反射、接收、计算距离”说清楚，再补几个应用场景。
+
+\textbf{知识点：} 超声波传感器通过发射超声波并接收反射回波，根据传播时间和声速计算距离。常见应用包括避障、测距、液位检测、机器人导航和倒车雷达等。
+\end{question}
+
+\subsection{大题四：项目题}
+
+\begin{question}{围绕自己的项目作答}
+\textbf{问题：} 题目要求简述项目功能，写出使用的传感器及硬件结构图，并画出流程图。
+
+\textbf{点评：} 这类题最好提前准备一版自己的项目模板：功能目标、硬件清单、数据流、控制逻辑和异常处理。考场上再临时组织会很慌。
+
+\textbf{知识点：} 项目题的答题重点通常是“输入是什么、处理逻辑是什么、输出是什么”。结构图要体现传感器、主控板、执行器/显示模块之间的连接关系；流程图要体现初始化、数据采集、判断处理、输出控制和循环执行。
+\end{question}
+
+\subsection{大题五：双色 LED 与 PWM 代码}
+
+\begin{question}{接线图与代码补全}
+\textbf{问题：} 第一问要求画双色 LED 灯接线图；第二问要求补全 GPIO、PWM 和循环切换颜色的代码。
+
+\textbf{点评：} 接线图如果答题卡已经给出图形，重点就是别把引脚连反。代码题要抓住 BOARD 编号、输出模式、PWM 对象创建、PWM 启动和循环调用颜色函数这几个空。
+
+\textbf{知识点：} 双色 LED 可通过两个 GPIO 引脚分别控制红色和绿色通道，再通过 PWM 调节亮度。代码骨架如下：
+
+\begin{verbatim}
+import RPi.GPIO as GPIO
+import time
+
+colors = [0xFF00, 0x00FF, 0x0FF0, 0xF00F]
+makerobo_pins = (11, 12)  # PIN 物理管脚：11 红、12 绿
+
+GPIO.setmode(GPIO.BOARD)
+GPIO.setwarnings(False)
+GPIO.setup(makerobo_pins, GPIO.OUT)
+GPIO.output(makerobo_pins, GPIO.LOW)
+
+p_R = GPIO.PWM(makerobo_pins[0], 2000)
+p_G = GPIO.PWM(makerobo_pins[1], 2000)
+p_R.start(0)
+p_G.start(0)
+
+def makerobo_pwm_map(x, in_min, in_max, out_min, out_max):
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+
+def makerobo_set_Color(col):
+    R_val = col >> 8
+    G_val = col & 0x00FF
+    R_val = makerobo_pwm_map(R_val, 0, 255, 0, 100)
+    G_val = makerobo_pwm_map(G_val, 0, 255, 0, 100)
+    p_R.ChangeDutyCycle(R_val)
+    p_G.ChangeDutyCycle(G_val)
+
+def makerobo_loop():
+    while True:
+        for col in colors:
+            makerobo_set_Color(col)
+            time.sleep(0.5)
+
+def makerobo_destroy():
+    p_G.stop()
+    p_R.stop()
+    GPIO.output(makerobo_pins, GPIO.LOW)
+    GPIO.cleanup()
+
+if __name__ == "__main__":
+    try:
+        makerobo_loop()
+    except KeyboardInterrupt:
+        makerobo_destroy()
+\end{verbatim}
+\end{question}
