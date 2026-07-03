@@ -715,9 +715,11 @@ function build() {
   const posts = loadPosts();
 
   for (const post of posts) {
-    const generatedPdf = generatePostPdf(post);
-    if (generatedPdf) {
-      post.pdf = generatedPdf;
+    if (!post.pdf) {
+      const generatedPdf = generatePostPdf(post);
+      if (generatedPdf) {
+        post.pdf = generatedPdf;
+      }
     }
   }
 
