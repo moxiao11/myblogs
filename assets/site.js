@@ -345,6 +345,24 @@
       }
       return [answerText.trim()];
     };
+    const challengePromptHtml = (card) => {
+      const clone = card.cloneNode(true);
+      clone.querySelector(".question-title")?.remove();
+      clone.querySelector(".quiz-controls")?.remove();
+      clone.querySelector("[data-knowledge-card]")?.remove();
+      for (const option of clone.querySelectorAll("[data-option]")) {
+        const list = option.closest(".option-list");
+        if (list) {
+          list.remove();
+        }
+      }
+      return clone.innerHTML.trim();
+    };
+    const typesetChallenge = () => {
+      if (window.MathJax?.typesetPromise) {
+        window.MathJax.typesetPromise([overlay]).catch(() => {});
+      }
+    };
 
     const questions = cards.map((card, index) => {
       const answerLine = card.nextElementSibling?.classList.contains("answer-line") ? card.nextElementSibling : null;
@@ -355,7 +373,8 @@
       }));
       const correctOptions = uniqueSorted([...answerText.matchAll(answerPattern)].map((match) => match[1]));
       const title = card.querySelector(".question-title")?.textContent.trim() || `题目 ${index + 1}`;
-      const blankCount = Math.max(1, (title.match(/_{2,}/g) || []).length);
+      const promptHtml = challengePromptHtml(card);
+      const blankCount = Math.max(1, card.querySelectorAll(".blank-line").length || (promptHtml.match(/_{2,}/g) || []).length);
       return {
         answerText,
         blankCount,
@@ -363,6 +382,7 @@
         fillAnswers: splitFillAnswers(answerText, blankCount),
         index,
         options,
+        promptHtml,
         title,
         type: options.length ? "choice" : "fill"
       };
@@ -464,17 +484,20 @@
       if (currentQuestion.type === "choice") {
         const multiple = currentQuestion.correctOptions.length > 1;
         body.innerHTML = `
-          <p class="challenge-question">${currentQuestion.title}</p>
+          <p class="challenge-question-title">${currentQuestion.title}</p>
+          <div class="challenge-question">${currentQuestion.promptHtml}</div>
           <p class="challenge-hint">${multiple ? "多选题：可选择多个选项" : "选择一个选项"}</p>
           <div class="challenge-options">${currentQuestion.options.map(optionButton).join("")}</div>
         `;
       } else {
         body.innerHTML = `
-          <p class="challenge-question">${currentQuestion.title}</p>
+          <p class="challenge-question-title">${currentQuestion.title}</p>
+          <div class="challenge-question">${currentQuestion.promptHtml}</div>
           <p class="challenge-hint">填空题：按空填写，大小写不敏感</p>
           <div class="challenge-fills">${currentQuestion.fillAnswers.map(fillInput).join("")}</div>
         `;
       }
+      typesetChallenge();
     };
 
     const showResult = (isCorrect, detail) => {
@@ -490,6 +513,7 @@
       confirmButton.hidden = true;
       nextButton.hidden = false;
       nextButton.textContent = currentIndex + 1 >= order.length ? "查看成绩" : "下一题";
+      typesetChallenge();
     };
 
     const confirmChoice = () => {

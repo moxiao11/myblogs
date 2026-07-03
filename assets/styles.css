@@ -1099,11 +1099,43 @@ blockquote,
   margin: 4px 0 0;
 }
 
-.challenge-question {
+.challenge-question-title {
   font-size: 1.12rem;
   font-weight: 700;
   line-height: 1.65;
   margin: 0;
+}
+
+.challenge-question {
+  color: var(--text);
+  display: grid;
+  gap: 10px;
+  line-height: 1.7;
+  margin: 10px 0 0;
+}
+
+.challenge-question p {
+  margin: 0;
+}
+
+.challenge-question ol,
+.challenge-question ul {
+  margin: 0;
+  padding-left: 1.35rem;
+}
+
+.challenge-question .math-box {
+  margin: 8px 0;
+  overflow-x: auto;
+}
+
+.challenge-question figure {
+  margin: 8px 0;
+}
+
+.challenge-question img {
+  max-height: 260px;
+  object-fit: contain;
 }
 
 .challenge-hint {
