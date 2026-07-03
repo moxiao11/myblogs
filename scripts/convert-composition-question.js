@@ -35,8 +35,42 @@ function stripPdfNoise(lines) {
   return cleaned;
 }
 
+function normalizeExtractedLines(lines) {
+  const normalized = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const previous = normalized[normalized.length - 1] || "";
+
+    if (line === "）" && previous.endsWith("（")) {
+      normalized[normalized.length - 1] = `${previous}）`;
+      if (lines[index + 1] === "。") {
+        normalized[normalized.length - 1] += "。";
+        index += 1;
+      }
+      continue;
+    }
+
+    if (line === "。" && previous) {
+      normalized[normalized.length - 1] = `${previous}。`;
+      continue;
+    }
+
+    normalized.push(line);
+  }
+  return normalized;
+}
+
+function closeOptions(output, state) {
+  if (state.inOptions) {
+    output.push("\\end{enumerate}");
+    output.push("");
+    state.inOptions = false;
+  }
+}
+
 function closeQuestion(output, state) {
   if (state.inQuestion) {
+    closeOptions(output, state);
     output.push("\\end{question}");
     output.push("");
     state.inQuestion = false;
@@ -45,6 +79,7 @@ function closeQuestion(output, state) {
 
 function writeNormalLine(output, state, rawLine) {
   const line = latexText(rawLine);
+  const option = rawLine.match(/^([A-D])\.\s*(.*)$/);
 
   if (/^[1-6]\s+[\u4e00-\u9fffA-Za-z]/.test(rawLine)) {
     closeQuestion(output, state);
@@ -70,6 +105,7 @@ function writeNormalLine(output, state, rawLine) {
   if (rawLine === "知识点：") {
     closeQuestion(output, state);
     output.push("\\textbf{知识点：}");
+    output.push("");
     return;
   }
 
@@ -80,14 +116,29 @@ function writeNormalLine(output, state, rawLine) {
     return;
   }
 
+  if (state.inQuestion && option) {
+    if (!state.inOptions) {
+      output.push("\\begin{enumerate}");
+      state.inOptions = true;
+    }
+    output.push(`\\item ${latexText(option[2])}`);
+    return;
+  }
+
+  if (state.inQuestion && state.inOptions) {
+    closeOptions(output, state);
+  }
+
   if (/^答案：/.test(rawLine)) {
     closeQuestion(output, state);
+    output.push("");
     output.push(`\\textbf{${latexText("答案：")}} ${latexText(rawLine.replace(/^答案：\s*/, ""))}`);
     return;
   }
 
   if (/^解析：/.test(rawLine)) {
     closeQuestion(output, state);
+    output.push("");
     output.push(`\\textbf{${latexText("解析：")}} ${latexText(rawLine.replace(/^解析：\s*/, ""))}`);
     return;
   }
@@ -108,24 +159,13 @@ function convert(lines) {
     "% ---",
     ""
   ];
-  const state = { inQuestion: false };
+  const state = { inQuestion: false, inOptions: false };
 
   const firstTitle = lines.findIndex((line) => line === "计算机组成原理题库分类整理");
   const contentStarts = lines
     .map((line, index) => (line === "1 数据的编码表示" ? index : -1))
     .filter((index) => index >= 0);
   const actualStart = contentStarts.length > 1 ? contentStarts[1] : contentStarts[0];
-  const tocStart = lines.findIndex((line) => line === "目录");
-
-  if (tocStart >= 0 && actualStart > tocStart) {
-    output.push("\\section*{目录}");
-    output.push("");
-    for (let index = tocStart + 1; index < actualStart; index += 1) {
-      output.push(latexText(lines[index]));
-    }
-    output.push("");
-  }
-
   const start = actualStart >= 0 ? actualStart : Math.max(firstTitle + 1, 0);
   for (let index = start; index < lines.length; index += 1) {
     writeNormalLine(output, state, lines[index]);
@@ -146,6 +186,6 @@ if (extracted.status !== 0) {
 }
 
 const raw = fs.readFileSync(textPath, "utf8");
-const lines = stripPdfNoise(raw.split(/\r?\n/));
+const lines = normalizeExtractedLines(stripPdfNoise(raw.split(/\r?\n/)));
 fs.writeFileSync(postPath, convert(lines), "utf8");
 console.log(`Wrote ${path.relative(root, postPath)} from ${path.relative(root, pdfPath)}`);
