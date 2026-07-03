@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { spawnSync } = require("child_process");
 
 const root = process.cwd();
 const postsDir = path.join(root, "posts");
@@ -356,6 +357,85 @@ function articleAssetUrl(value) {
   return `../${String(value).replace(/^\/+/, "")}`;
 }
 
+function latexEscape(value) {
+  return String(value || "")
+    .replace(/\\/g, "\\textbackslash{}")
+    .replace(/([#$%&_{}])/g, "\\$1")
+    .replace(/\^/g, "\\textasciicircum{}")
+    .replace(/~/g, "\\textasciitilde{}");
+}
+
+function texPath(value) {
+  return String(value).replace(/\\/g, "/").replace(/\/?$/, "/");
+}
+
+function pdfWrapper(post) {
+  const assetPath = texPath(path.join(root, "assets"));
+  const rootPath = texPath(root);
+  return `\\documentclass[UTF8]{ctexart}
+\\usepackage[a4paper,margin=2.4cm]{geometry}
+\\usepackage{amsmath,amssymb,amsthm}
+\\usepackage{enumitem}
+\\usepackage[strings]{underscore}
+\\usepackage{graphicx}
+\\usepackage{float}
+\\usepackage{xcolor}
+\\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
+\\graphicspath{{${assetPath}}{${rootPath}}}
+\\newtheorem{theorem}{定理}
+\\newtheorem{lemma}{引理}
+\\newtheorem{definition}{定义}
+\\newtheorem{proposition}{命题}
+\\newtheorem{corollary}{推论}
+\\newenvironment{question}[1]{\\par\\medskip\\noindent\\textbf{#1}\\par\\smallskip}{\\par\\medskip}
+\\newenvironment{answer}{\\par\\noindent\\textbf{答案：}}{\\par}
+\\newenvironment{explanation}{\\par\\noindent\\textbf{解析：}}{\\par}
+\\title{${latexEscape(post.title)}}
+\\author{${latexEscape(post.author)}}
+\\date{${latexEscape(formatDate(post.date) || post.date)}}
+\\begin{document}
+\\maketitle
+\\catcode\`\\#=12
+\\catcode\`\\%=12
+\\catcode\`\\^=12
+${post.body}
+\\end{document}
+`;
+}
+
+function generatePostPdf(post) {
+  const workDir = path.join(root, "tmp", "latex-pdf", post.slug);
+  ensureDir(workDir);
+  const texFile = path.join(workDir, `${post.slug}.tex`);
+  fs.writeFileSync(texFile, pdfWrapper(post), "utf8");
+
+  const result = spawnSync("xelatex", [
+    "-interaction=nonstopmode",
+    "-halt-on-error",
+    "-output-directory",
+    workDir,
+    texFile
+  ], { cwd: root, encoding: "utf8" });
+
+  const pdfFile = path.join(workDir, `${post.slug}.pdf`);
+  if (result.status !== 0 || !fs.existsSync(pdfFile)) {
+    console.warn(`Skipped PDF for ${post.source}: xelatex failed.`);
+    if (result.stdout) {
+      console.warn(result.stdout.split(/\r?\n/).slice(-12).join("\n"));
+    }
+    if (result.stderr) {
+      console.warn(result.stderr);
+    }
+    return "";
+  }
+
+  const targetRelative = `assets/${post.slug}.pdf`;
+  const target = path.join(distDir, targetRelative);
+  ensureDir(path.dirname(target));
+  fs.copyFileSync(pdfFile, target);
+  return targetRelative;
+}
+
 function formatDate(dateValue) {
   if (!dateValue) {
     return "";
@@ -615,6 +695,7 @@ function loadPosts() {
       const html = renderLatex(body);
       return {
         ...meta,
+        body,
         html,
         minutes: readingTime(html),
         source: file
@@ -632,6 +713,13 @@ function build() {
   cleanDist();
   copyAssets();
   const posts = loadPosts();
+
+  for (const post of posts) {
+    const generatedPdf = generatePostPdf(post);
+    if (generatedPdf) {
+      post.pdf = generatedPdf;
+    }
+  }
 
   for (const post of posts) {
     writeFile(path.join(distDir, postUrl(post)), renderPost(post));
