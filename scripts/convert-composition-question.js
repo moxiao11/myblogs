@@ -4,9 +4,22 @@ const { spawnSync } = require("child_process");
 
 const root = process.cwd();
 const pdfPath = path.join(root, "assets", "composition-question.pdf");
+const referenceTexPath = path.join(root, "dist", "参考", "main.tex");
 const tmpDir = path.join(root, "tmp", "pdf-extract");
 const textPath = path.join(tmpDir, "composition-question-raw.txt");
 const postPath = path.join(root, "posts", "2026-07-03-computer-organization-final-question-bank.tex");
+const metaBlock = [
+  "% ---",
+  "% title: 计算机组成原理期末复习题库",
+  "% date: 2026-07-03",
+  "% author: Crystal-Sky",
+  "% tags: 计算机组成原理, 计组, 期末复习, 题库",
+  "% summary: 《计算机组成原理》期末复习题库 TeX 整理版，正文可在博客直接阅读，并保留原始 PDF 下载。",
+  "% slug: computer-organization-final-question-bank",
+  "% pdf: assets/composition-question.pdf",
+  "% ---",
+  ""
+];
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -114,6 +127,24 @@ function isTableLikeLine(rawLine) {
     || /^(R 型|I 型|J 型)\s+/.test(rawLine);
 }
 
+function documentBody(source) {
+  const begin = source.indexOf("\\begin{document}");
+  const end = source.lastIndexOf("\\end{document}");
+  const body = begin >= 0
+    ? source.slice(begin + "\\begin{document}".length, end >= 0 ? end : undefined)
+    : source;
+
+  return body
+    .replace(/^\s*\\maketitle\s*/m, "")
+    .replace(/^\s*\\tableofcontents\s*/m, "")
+    .replace(/^\s*\\newpage\s*/m, "")
+    .trim();
+}
+
+function convertReferenceTex(source) {
+  return `${metaBlock.join("\n")}${documentBody(source)}\n`;
+}
+
 function writeNormalLine(output, state, rawLine) {
   const line = latexText(rawLine);
   const option = rawLine.match(/^([A-D])\.\s*(.*)$/);
@@ -208,18 +239,7 @@ function writeNormalLine(output, state, rawLine) {
 }
 
 function convert(lines) {
-  const output = [
-    "% ---",
-    "% title: 计算机组成原理期末复习题库",
-    "% date: 2026-07-03",
-    "% author: Crystal-Sky",
-    "% tags: 计算机组成原理, 计组, 期末复习, 题库",
-    "% summary: 《计算机组成原理》期末复习题库 PDF 转写版，正文可在博客直接阅读，并保留原始 PDF 下载。",
-    "% slug: computer-organization-final-question-bank",
-    "% pdf: assets/composition-question.pdf",
-    "% ---",
-    ""
-  ];
+  const output = [...metaBlock];
   const state = { block: "", inQuestion: false, inOptions: false, inParts: false };
 
   const firstTitle = lines.findIndex((line) => line === "计算机组成原理题库分类整理");
@@ -234,6 +254,13 @@ function convert(lines) {
   closeOpenBlocks(output, state);
 
   return `${output.join("\n").replace(/\n{3,}/g, "\n\n")}\n`;
+}
+
+if (fs.existsSync(referenceTexPath)) {
+  const source = fs.readFileSync(referenceTexPath, "utf8");
+  fs.writeFileSync(postPath, convertReferenceTex(source), "utf8");
+  console.log(`Wrote ${path.relative(root, postPath)} from ${path.relative(root, referenceTexPath)}`);
+  process.exit(0);
 }
 
 ensureDir(tmpDir);

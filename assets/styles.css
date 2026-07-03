@@ -717,6 +717,18 @@ a:hover {
   list-style-type: decimal;
 }
 
+.blank-line {
+  border-bottom: 1px solid currentColor;
+  display: inline-block;
+  min-width: 8em;
+  transform: translateY(-0.15em);
+}
+
+.blank-space {
+  display: inline-block;
+  min-width: 1.5em;
+}
+
 .article h1 {
   margin: 0 0 14px;
   font-size: clamp(2rem, 6vw, 3.6rem);
@@ -755,12 +767,27 @@ a:hover {
 .math-box,
 .theorem,
 .proof,
-blockquote {
+blockquote,
+.knowledge-block {
   border-left: 4px solid #409eff;
   background: rgba(64, 158, 255, 0.08);
   margin: 22px 0;
   padding: 14px 18px;
   border-radius: 0 8px 8px 0;
+}
+
+.knowledge-block {
+  background: rgba(37, 99, 235, 0.07);
+  border-left-color: var(--blue);
+}
+
+.center-block {
+  text-align: center;
+}
+
+.center-block figure {
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .theorem {
@@ -789,10 +816,17 @@ blockquote {
   margin: 0 0 10px;
 }
 
-.qa-card ol,
 .qa-card ul {
-  list-style-type: upper-alpha;
   margin: 8px 0 0;
+}
+
+.qa-card ol {
+  list-style-type: decimal;
+  margin: 8px 0 0;
+}
+
+.qa-card .option-list {
+  list-style-type: upper-alpha;
 }
 
 .qa-card.is-interactive li[data-option] {
@@ -875,18 +909,29 @@ blockquote {
   color: #b42332;
 }
 
-.answer-line {
-  align-items: baseline;
+.answer-line,
+.explanation-line {
   background: rgba(13, 148, 136, 0.08);
   border-radius: 8px;
   color: #0f766e;
-  display: flex;
-  gap: 6px;
+  display: block;
   margin: -8px 0 20px;
   padding: 8px 12px;
 }
 
-.answer-line[hidden] {
+.answer-line > strong,
+.explanation-line > strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.answer-line p,
+.explanation-line p {
+  margin: 0.55em 0;
+}
+
+.answer-line[hidden],
+.explanation-line[hidden] {
   display: none;
 }
 

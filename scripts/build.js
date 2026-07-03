@@ -148,6 +148,8 @@ function inlineFormat(raw) {
     .replace(/\\emph\{([^}]+)\}/g, (_, text) => hold(`<em>${inlineFormat(text)}</em>`))
     .replace(/\\textit\{([^}]+)\}/g, (_, text) => hold(`<em>${inlineFormat(text)}</em>`))
     .replace(/\\texttt\{([^}]+)\}/g, (_, text) => hold(`<code>${escapeHtml(text)}</code>`))
+    .replace(/\\underline\{\\hspace\{[^}]+\}\}/g, () => hold(`<span class="blank-line" aria-hidden="true"></span>`))
+    .replace(/\\hspace\{[^}]+\}/g, () => hold(`<span class="blank-space" aria-hidden="true"></span>`))
     .replace(/`([^`]+)`/g, (_, text) => hold(`<code>${escapeHtml(text)}</code>`))
     .replace(/\\\(([\s\S]*?)\\\)/g, (match) => hold(match))
     .replace(/\$(?!\$)([^$\n]+?)\$/g, (match) => hold(match));
@@ -157,6 +159,9 @@ function inlineFormat(raw) {
     .replace(/\\LaTeX/g, "LaTeX")
     .replace(/\\TeX/g, "TeX")
     .replace(/\\ldots/g, "...")
+    .replace(/\\qquad/g, " ")
+    .replace(/\\quad/g, " ")
+    .replace(/\\,/g, " ")
     .replace(/\\%/g, "%")
     .replace(/\\&/g, "&amp;")
     .replace(/\\_/g, "_")
@@ -197,12 +202,19 @@ function renderList(raw, ordered) {
     .split(/\\item/g)
     .map((item) => item.trim())
     .filter(Boolean)
-    .map((item, index) => {
-      const option = ordered ? ` data-option="${String.fromCharCode(65 + index)}" tabindex="0"` : "";
-      return `<li${option}>${inlineWithBreaks(item)}</li>`;
-    })
+    .map((item) => `<li>${inlineWithBreaks(item)}</li>`)
     .join("");
   return `<${ordered ? "ol" : "ul"}>${items}</${ordered ? "ol" : "ul"}>`;
+}
+
+function renderOptionItems(items) {
+  const rendered = items
+    .map(({ key, text }, index) => {
+      const option = key || String.fromCharCode(65 + index);
+      return `<li data-option="${escapeAttr(option)}" tabindex="0">${inlineWithBreaks(text)}</li>`;
+    })
+    .join("");
+  return `<ol class="option-list">${rendered}</ol>`;
 }
 
 function inlineWithBreaks(raw) {
@@ -222,6 +234,10 @@ function renderPartList(raw) {
   return `<ol class="part-list">${items}</ol>`;
 }
 
+function renderAnswerBlock(className, label, raw) {
+  return `<section class="${className}" hidden><strong>${label}</strong><div>${renderLines(raw)}</div></section>`;
+}
+
 function renderImage(source, alt = "") {
   const rawSource = String(source || "").trim();
   if (!rawSource) {
@@ -235,11 +251,10 @@ function renderImage(source, alt = "") {
   return `<figure class="article-figure"><img src="${escapeAttr(src)}" alt="${escapeAttr(safeAlt)}"></figure>`;
 }
 
-function renderLines(text) {
+function renderLines(text, state = { sectionNumber: 0, questionNumber: 0, usedHeadings: new Map() }) {
   const lines = text.split(/\r?\n/);
   const output = [];
   let paragraph = [];
-  const usedHeadings = new Map();
 
   const flushParagraph = () => {
     if (!paragraph.length) {
@@ -251,8 +266,8 @@ function renderLines(text) {
 
   const headingId = (title) => {
     const base = slugify(title, "section");
-    const count = usedHeadings.get(base) || 0;
-    usedHeadings.set(base, count + 1);
+    const count = state.usedHeadings.get(base) || 0;
+    state.usedHeadings.set(base, count + 1);
     return count ? `${base}-${count + 1}` : base;
   };
 
@@ -270,6 +285,27 @@ function renderLines(text) {
       continue;
     }
 
+    const optionLine = line.match(/^([A-D])\.\s*(.+)$/);
+    if (optionLine) {
+      flushParagraph();
+      const options = [];
+      let cursor = index;
+      for (; cursor < lines.length; cursor += 1) {
+        const current = lines[cursor].trim();
+        if (!current) {
+          continue;
+        }
+        const option = current.match(/^([A-D])\.\s*(.+)$/);
+        if (!option) {
+          break;
+        }
+        options.push({ key: option[1], text: option[2] });
+      }
+      output.push(renderOptionItems(options));
+      index = cursor - 1;
+      continue;
+    }
+
     const image = line.match(/^\\includegraphics(?:\[[^\]]+\])?\{([^}]+)\}$/);
     if (image) {
       flushParagraph();
@@ -282,6 +318,10 @@ function renderLines(text) {
       flushParagraph();
       const level = heading[1] === "section" ? 2 : heading[1] === "subsection" ? 3 : 4;
       const title = inlineFormat(heading[2]);
+      if (heading[1] === "section") {
+        state.sectionNumber += 1;
+        state.questionNumber = 0;
+      }
       output.push(`<h${level} id="${headingId(heading[2])}">${title}</h${level}>`);
       continue;
     }
@@ -303,23 +343,30 @@ function renderLines(text) {
         output.push(renderPartList(collected.text));
       } else if (env === "figure") {
         const figureImage = collected.text.match(/\\includegraphics(?:\[[^\]]+\])?\{([^}]+)\}/);
-        output.push(figureImage ? renderImage(figureImage[1]) : `<figure>${renderLines(collected.text)}</figure>`);
+        output.push(figureImage ? renderImage(figureImage[1]) : `<figure>${renderLines(collected.text, state)}</figure>`);
       } else if (env === "quote") {
         output.push(`<blockquote>${inlineFormat(collected.text.replace(/\n+/g, " "))}</blockquote>`);
+      } else if (env === "center") {
+        output.push(`<div class="center-block">${renderLines(collected.text, state)}</div>`);
+      } else if (env === "knowledge") {
+        output.push(`<aside class="knowledge-block"><strong>知识点：</strong>${renderLines(collected.text, state)}</aside>`);
       } else if (env === "question") {
-        const heading = title ? `<p class="question-title">${inlineFormat(title)}</p>` : "";
-        output.push(`<section class="qa-card">${heading}${renderLines(collected.text)}</section>`);
+        state.questionNumber += 1;
+        const fallbackTitle = state.sectionNumber ? `题目 ${state.sectionNumber}.${state.questionNumber}` : "题目";
+        const questionTitle = title || (label ? `${fallbackTitle} ${label}` : fallbackTitle);
+        const heading = `<p class="question-title">${inlineFormat(questionTitle)}</p>`;
+        output.push(`<section class="qa-card">${heading}${renderLines(collected.text, state)}</section>`);
       } else if (env === "answer") {
-        output.push(`<p class="answer-line" hidden><strong>答案：</strong>${inlineFormat(collected.text.replace(/\n+/g, " "))}</p>`);
-      } else if (env === "explanation") {
-        output.push(`<p class="explanation-line" hidden><strong>解析：</strong>${inlineFormat(collected.text.replace(/\n+/g, " "))}</p>`);
+        output.push(renderAnswerBlock("answer-line", "答案：", collected.text));
+      } else if (env === "explanation" || env === "analysisenv") {
+        output.push(renderAnswerBlock("explanation-line", "解析：", collected.text));
       } else if (["theorem", "lemma", "definition", "proposition", "corollary"].includes(env)) {
         const name = label ? ` (${inlineFormat(label)})` : "";
-        output.push(`<div class="theorem"><strong>${env[0].toUpperCase()}${env.slice(1)}${name}.</strong> ${renderLines(collected.text)}</div>`);
+        output.push(`<div class="theorem"><strong>${env[0].toUpperCase()}${env.slice(1)}${name}.</strong> ${renderLines(collected.text, state)}</div>`);
       } else if (env === "proof") {
-        output.push(`<div class="proof"><strong>Proof.</strong> ${renderLines(collected.text)}</div>`);
+        output.push(`<div class="proof"><strong>Proof.</strong> ${renderLines(collected.text, state)}</div>`);
       } else {
-        output.push(`<div>${renderLines(collected.text)}</div>`);
+        output.push(`<div>${renderLines(collected.text, state)}</div>`);
       }
       continue;
     }
