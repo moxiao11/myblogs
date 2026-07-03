@@ -199,10 +199,27 @@ function renderList(raw, ordered) {
     .filter(Boolean)
     .map((item, index) => {
       const option = ordered ? ` data-option="${String.fromCharCode(65 + index)}" tabindex="0"` : "";
-      return `<li${option}>${inlineFormat(item.replace(/\n+/g, " "))}</li>`;
+      return `<li${option}>${inlineWithBreaks(item)}</li>`;
     })
     .join("");
   return `<${ordered ? "ol" : "ul"}>${items}</${ordered ? "ol" : "ul"}>`;
+}
+
+function inlineWithBreaks(raw) {
+  return String(raw)
+    .split(/\\\\\s*/g)
+    .map((part) => inlineFormat(part.replace(/\n+/g, " ")))
+    .join("<br>");
+}
+
+function renderPartList(raw) {
+  const items = raw
+    .split(/\\item/g)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => `<li>${inlineWithBreaks(item)}</li>`)
+    .join("");
+  return `<ol class="part-list">${items}</ol>`;
 }
 
 function renderImage(source, alt = "") {
@@ -228,8 +245,7 @@ function renderLines(text) {
     if (!paragraph.length) {
       return;
     }
-    const joined = paragraph.join(" ").replace(/\\\\\s*/g, "<br>");
-    output.push(`<p>${inlineFormat(joined)}</p>`);
+    output.push(`<p>${inlineWithBreaks(paragraph.join(" "))}</p>`);
     paragraph = [];
   };
 
@@ -283,6 +299,8 @@ function renderLines(text) {
         output.push(`<div class="abstract"><strong>Abstract.</strong> ${inlineFormat(collected.text.replace(/\n+/g, " "))}</div>`);
       } else if (env === "itemize" || env === "enumerate") {
         output.push(renderList(collected.text, env === "enumerate"));
+      } else if (env === "parts") {
+        output.push(renderPartList(collected.text));
       } else if (env === "figure") {
         const figureImage = collected.text.match(/\\includegraphics(?:\[[^\]]+\])?\{([^}]+)\}/);
         output.push(figureImage ? renderImage(figureImage[1]) : `<figure>${renderLines(collected.text)}</figure>`);

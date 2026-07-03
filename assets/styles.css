@@ -701,6 +701,22 @@ a:hover {
   padding-left: 34px;
 }
 
+.part-list {
+  display: grid;
+  gap: 8px;
+  list-style: decimal;
+  margin: 10px 0 18px;
+  padding-left: 1.45em;
+}
+
+.part-list li {
+  padding-left: 4px;
+}
+
+.qa-card .part-list {
+  list-style-type: decimal;
+}
+
 .article h1 {
   margin: 0 0 14px;
   font-size: clamp(2rem, 6vw, 3.6rem);

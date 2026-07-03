@@ -68,13 +68,50 @@ function closeOptions(output, state) {
   }
 }
 
+function closeParts(output, state) {
+  if (state.inParts) {
+    output.push("\\end{parts}");
+    output.push("");
+    state.inParts = false;
+  }
+}
+
 function closeQuestion(output, state) {
   if (state.inQuestion) {
     closeOptions(output, state);
+    closeParts(output, state);
     output.push("\\end{question}");
     output.push("");
     state.inQuestion = false;
   }
+}
+
+function closeOpenBlocks(output, state) {
+  closeQuestion(output, state);
+  closeParts(output, state);
+  state.block = "";
+}
+
+function writePart(output, state, rawLine) {
+  const part = rawLine.match(/^（(\d+)）\s*(.*)$/) || rawLine.match(/^(\d+)\.\s+(.*)$/);
+  if (!part) {
+    return false;
+  }
+  if (!state.inParts) {
+    output.push("\\begin{parts}");
+    state.inParts = true;
+  }
+  output.push(`\\item ${latexText(part[2])}`);
+  return true;
+}
+
+function isTableLikeLine(rawLine) {
+  return /^(周期|节拍)\s+微操作$/.test(rawLine)
+    || /^[CT]\d+\s+/.test(rawLine)
+    || /^(MOD|存储单元地址|格式)\s+/.test(rawLine)
+    || /^(00|01|10)\s+/.test(rawLine)
+    || /^[0-9A-F]{4}H\s+/.test(rawLine)
+    || /^(R 型|I 型|J 型)\s+/.test(rawLine);
 }
 
 function writeNormalLine(output, state, rawLine) {
@@ -82,42 +119,48 @@ function writeNormalLine(output, state, rawLine) {
   const option = rawLine.match(/^([A-D])\.\s*(.*)$/);
 
   if (/^[1-6]\s+[\u4e00-\u9fffA-Za-z]/.test(rawLine)) {
-    closeQuestion(output, state);
+    closeOpenBlocks(output, state);
     output.push(`\\section{${line}}`);
     output.push("");
     return;
   }
 
   if (/^[1-6]\.\d+\s+[\u4e00-\u9fffA-Za-z]/.test(rawLine)) {
-    closeQuestion(output, state);
+    closeOpenBlocks(output, state);
     output.push(`\\subsection{${line}}`);
     output.push("");
     return;
   }
 
   if (rawLine === "本部分重点") {
-    closeQuestion(output, state);
+    closeOpenBlocks(output, state);
     output.push("\\subsection*{本部分重点}");
     output.push("");
     return;
   }
 
   if (rawLine === "知识点：") {
-    closeQuestion(output, state);
+    closeOpenBlocks(output, state);
     output.push("\\textbf{知识点：}");
     output.push("");
     return;
   }
 
   if (/^题目\s+/.test(rawLine)) {
-    closeQuestion(output, state);
+    closeOpenBlocks(output, state);
     output.push(`\\begin{question}{${line}}`);
     state.inQuestion = true;
+    state.block = "question";
+    return;
+  }
+
+  if (state.inQuestion && writePart(output, state, rawLine)) {
     return;
   }
 
   if (state.inQuestion && option) {
     if (!state.inOptions) {
+      closeParts(output, state);
       output.push("\\begin{enumerate}");
       state.inOptions = true;
     }
@@ -130,20 +173,38 @@ function writeNormalLine(output, state, rawLine) {
   }
 
   if (/^答案：/.test(rawLine)) {
-    closeQuestion(output, state);
+    closeOpenBlocks(output, state);
+    state.block = "answer";
+    const answer = rawLine.replace(/^答案：\s*/, "");
     output.push("");
-    output.push(`\\textbf{${latexText("答案：")}} ${latexText(rawLine.replace(/^答案：\s*/, ""))}`);
+    output.push(`\\textbf{${latexText("答案：")}}${answer ? "" : ""}`);
+    if (answer) {
+      if (!writePart(output, state, answer)) {
+        output[output.length - 1] += ` ${latexText(answer)}`;
+      }
+    }
     return;
   }
 
   if (/^解析：/.test(rawLine)) {
-    closeQuestion(output, state);
+    closeOpenBlocks(output, state);
+    state.block = "explanation";
+    const explanation = rawLine.replace(/^解析：\s*/, "");
     output.push("");
-    output.push(`\\textbf{${latexText("解析：")}} ${latexText(rawLine.replace(/^解析：\s*/, ""))}`);
+    output.push(`\\textbf{${latexText("解析：")}}${explanation ? "" : ""}`);
+    if (explanation) {
+      if (!writePart(output, state, explanation)) {
+        output[output.length - 1] += ` ${latexText(explanation)}`;
+      }
+    }
     return;
   }
 
-  output.push(line);
+  if ((state.block === "answer" || state.block === "explanation") && writePart(output, state, rawLine)) {
+    return;
+  }
+
+  output.push(isTableLikeLine(rawLine) ? `${line} \\\\` : line);
 }
 
 function convert(lines) {
@@ -159,7 +220,7 @@ function convert(lines) {
     "% ---",
     ""
   ];
-  const state = { inQuestion: false, inOptions: false };
+  const state = { block: "", inQuestion: false, inOptions: false, inParts: false };
 
   const firstTitle = lines.findIndex((line) => line === "计算机组成原理题库分类整理");
   const contentStarts = lines
@@ -170,7 +231,7 @@ function convert(lines) {
   for (let index = start; index < lines.length; index += 1) {
     writeNormalLine(output, state, lines[index]);
   }
-  closeQuestion(output, state);
+  closeOpenBlocks(output, state);
 
   return `${output.join("\n").replace(/\n{3,}/g, "\n\n")}\n`;
 }
