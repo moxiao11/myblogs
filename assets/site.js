@@ -171,15 +171,37 @@
       card.classList.remove("has-knowledge-card");
     };
 
-    const showKnowledge = (card, answerText, explanationText = "") => {
+    const explanationHtml = (explanationLine) => {
+      if (!explanationLine) {
+        return "";
+      }
+      const clone = explanationLine.cloneNode(true);
+      clone.hidden = false;
+      clone.querySelector("strong")?.remove();
+      return clone.querySelector("div")?.innerHTML.trim() || clone.innerHTML.trim();
+    };
+
+    const typesetKnowledge = (note) => {
+      if (window.MathJax?.typesetPromise) {
+        window.MathJax.typesetPromise([note]).catch(() => {});
+      }
+    };
+
+    const showKnowledge = (card, answerText, explanationLine = null) => {
       removeKnowledge(card);
-      const [heading, description] = explanationText ? ["题目解析", explanationText] : knowledgeFor(card, answerText);
       const note = document.createElement("aside");
       note.className = "knowledge-card";
       note.dataset.knowledgeCard = "true";
-      note.innerHTML = `<span>知识点</span><strong>${heading}</strong><p>${description}</p>`;
+      const body = explanationHtml(explanationLine);
+      if (body) {
+        note.innerHTML = `<span>知识点</span><strong>题目解析</strong><div class="knowledge-card-body">${body}</div>`;
+      } else {
+        const [heading, description] = knowledgeFor(card, answerText);
+        note.innerHTML = `<span>知识点</span><strong>${heading}</strong><p>${description}</p>`;
+      }
       card.appendChild(note);
       card.classList.add("has-knowledge-card");
+      typesetKnowledge(note);
     };
 
     for (const card of cards) {
@@ -190,7 +212,6 @@
 
       const answerText = answerLine.textContent.replace(/^答案[:：]\s*/, "").trim();
       const explanationLine = answerLine.nextElementSibling?.classList.contains("explanation-line") ? answerLine.nextElementSibling : null;
-      const explanationText = explanationLine ? explanationLine.textContent.replace(/^解析[:：]\s*/, "").trim() : "";
       const correct = [...answerText.matchAll(answerPattern)]
         .map((match) => match[1])
         .filter((value, index, all) => all.indexOf(value) === index)
@@ -247,7 +268,7 @@
             option.classList.add("is-correct-option");
           }
         }
-        showKnowledge(card, answerText, explanationText);
+        showKnowledge(card, answerText, explanationLine);
       };
 
       const evaluate = () => {
