@@ -96,8 +96,30 @@ function tokenFor(html) {
   return `\n${token}\n`;
 }
 
+function stripBalancedCmd(text, cmdName) {
+  const prefix = `\\${cmdName}{`;
+  let idx = 0;
+  while ((idx = text.indexOf(prefix, idx)) !== -1) {
+    let depth = 1;
+    let pos = idx + prefix.length;
+    while (pos < text.length && depth > 0) {
+      if (text[pos] === "{") depth++;
+      else if (text[pos] === "}") depth--;
+      pos++;
+    }
+    text = text.slice(0, idx) + text.slice(pos);
+  }
+  return text;
+}
+
 function preprocessLatex(body) {
-  let text = body
+  let text = body;
+  const documentStart = text.indexOf("\\begin{document}");
+  if (documentStart !== -1) {
+    text = text.slice(documentStart + "\\begin{document}".length);
+  }
+
+  text = text
     .replace(/\\documentclass(?:\[[^\]]+\])?\{[^}]+\}/g, "")
     .replace(/\\usepackage(?:\[[^\]]+\])?\{[^}]+\}/g, "")
     .replace(/\\begin\{document\}/g, "")
@@ -105,10 +127,33 @@ function preprocessLatex(body) {
     .replace(/\\maketitle/g, "")
     .replace(/\\tableofcontents/g, "")
     .replace(/\\newpage/g, "")
-    .replace(/\\addcontentsline\{[^}]+\}\{[^}]+\}\{[^}]+\}/g, "")
-    .replace(/\\title\{[^}]+\}/g, "")
-    .replace(/\\author\{[^}]+\}/g, "")
-    .replace(/\\date\{[^}]+\}/g, "");
+    .replace(/\\addcontentsline\{[^}]+\}\{[^}]+\}\{[^}]+\}/g, "");
+
+  // Strip commands that may have nested braces
+  text = stripBalancedCmd(text, "lstset");
+  text = stripBalancedCmd(text, "title");
+  text = stripBalancedCmd(text, "author");
+  text = stripBalancedCmd(text, "date");
+
+  // \renewcommand takes two args: \renewcommand{cmd}{value}
+  text = text.replace(/\\renewcommand\{[^}]+\}\{[^}]*\}/g, "");
+
+  // Strip preamble-only commands that shouldn't appear in body
+  text = text
+    .replace(/\\pagestyle\{[^}]+\}/g, "")
+    .replace(/\\fancyhf\{\}/g, "")
+    .replace(/\\fancyhead\[[^\]]*\]\{[^}]*\}/g, "")
+    .replace(/\\fancyfoot\[[^\]]*\]\{[^}]*\}/g, "")
+    .replace(/\\thispagestyle\{[^}]+\}/g, "")
+    .replace(/\\vspace\*?\{[^}]+\}/g, "")
+    .replace(/\\hrule/g, "")
+    .replace(/\\hspace\*?\{[^}]+\}/g, "")
+    .replace(/\\noindent/g, "")
+    .replace(/\\medskip/g, "")
+    .replace(/\\smallskip/g, "")
+    .replace(/\\bigskip/g, "")
+    .replace(/\\newpage/g, "")
+    .replace(/\\clearpage/g, "");
 
   text = text.replace(/\\begin\{(verbatim|lstlisting)\}([\s\S]*?)\\end\{\1\}/g, (_, _env, code) => {
     return tokenFor(`<pre><code>${escapeHtml(code.trim())}</code></pre>`);
@@ -144,10 +189,18 @@ function inlineFormat(raw) {
       const safe = escapeAttr(url);
       return hold(`<a href="${safe}">${escapeHtml(url)}</a>`);
     })
+    // Process inner commands BEFORE outer ones — \textcolor etc. may appear
+    // inside \textbf/\emph, and replacing them first removes nested braces
+    .replace(/\\textcolor\{([^}]+)\}\{([^}]+)\}/g, (_, color, text) => {
+      const safeColor = /^[a-zA-Z]+$/.test(color) ? color : "";
+      return safeColor ? hold(`<span style="color:${safeColor}">${inlineFormat(text)}</span>`) : hold(inlineFormat(text));
+    })
+    .replace(/\\texttt\{([^}]+)\}/g, (_, text) => hold(`<code>${escapeHtml(text)}</code>`))
+    .replace(/\\textsf\{([^}]+)\}/g, (_, text) => hold(inlineFormat(text)))
+    .replace(/\\small\{([^}]*)\}/g, (_, text) => hold(`<small>${inlineFormat(text)}</small>`))
     .replace(/\\textbf\{([^}]+)\}/g, (_, text) => hold(`<strong>${inlineFormat(text)}</strong>`))
     .replace(/\\emph\{([^}]+)\}/g, (_, text) => hold(`<em>${inlineFormat(text)}</em>`))
     .replace(/\\textit\{([^}]+)\}/g, (_, text) => hold(`<em>${inlineFormat(text)}</em>`))
-    .replace(/\\texttt\{([^}]+)\}/g, (_, text) => hold(`<code>${escapeHtml(text)}</code>`))
     .replace(/\\underline\{\\hspace\{[^}]+\}\}/g, () => hold(`<span class="blank-line" aria-hidden="true"></span>`))
     .replace(/\\hspace\{[^}]+\}/g, () => hold(`<span class="blank-space" aria-hidden="true"></span>`))
     .replace(/`([^`]+)`/g, (_, text) => hold(`<code>${escapeHtml(text)}</code>`))
@@ -170,8 +223,16 @@ function inlineFormat(raw) {
     .replace(/\\#/g, "#")
     .replace(/~\/?/g, " ");
 
-  for (const [token, html] of htmlTokens) {
-    value = value.replaceAll(token, html);
+  // Multi-pass restoration: tokens may be nested in other tokens' HTML
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [token, html] of htmlTokens) {
+      if (value.includes(token)) {
+        value = value.replaceAll(token, html);
+        changed = true;
+      }
+    }
   }
 
   return value.trim();
@@ -198,13 +259,61 @@ function collectEnvironment(lines, start, envName) {
 }
 
 function renderList(raw, ordered) {
-  const items = raw
-    .split(/\\item/g)
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .map((item) => `<li>${inlineWithBreaks(item)}</li>`)
-    .join("");
-  return `<${ordered ? "ol" : "ul"}>${items}</${ordered ? "ol" : "ul"}>`;
+  const nestedMap = new Map();
+  let nestId = 0;
+
+  // Protect nested list environments with tokens
+  let text = raw;
+  let prev = "";
+  while (prev !== text) {
+    prev = text;
+    text = text.replace(/\\begin\{(itemize|enumerate)\}([\s\S]*?)\\end\{\1\}/g, (_match, env) => {
+      const id = nestId++;
+      const beginTag = `\\begin{${env}}`;
+      const endTag = `\\end{${env}}`;
+      const body = _match.slice(beginTag.length, _match.length - endTag.length);
+      nestedMap.set(id, { env, body });
+      return `@@NEST_${id}@@`;
+    });
+  }
+
+  // Split by \item at top level only
+  const rawItems = text.split(/\\item/g).map((s) => s.trim()).filter(Boolean);
+
+  const renderedItems = rawItems.map((rawItem) => {
+    // Parse into segments: text and nested tokens
+    const segments = [];
+    const tokenRe = /@@NEST_(\d+)@@/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = tokenRe.exec(rawItem)) !== null) {
+      if (match.index > lastIndex) {
+        segments.push({ type: "text", value: rawItem.slice(lastIndex, match.index) });
+      }
+      const id = Number(match[1]);
+      const nested = nestedMap.get(id);
+      if (nested) {
+        segments.push({ type: "nested", env: nested.env, body: nested.body });
+      }
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < rawItem.length) {
+      segments.push({ type: "text", value: rawItem.slice(lastIndex) });
+    }
+
+    const rendered = segments.map((seg) => {
+      if (seg.type === "text") {
+        return inlineWithBreaks(seg.value);
+      } else {
+        return renderList(seg.body, seg.env === "enumerate");
+      }
+    }).join("");
+
+    return `<li>${rendered}</li>`;
+  }).join("");
+
+  return `<${ordered ? "ol" : "ul"}>${renderedItems}</${ordered ? "ol" : "ul"}>`;
 }
 
 function renderOptionItems(items) {
@@ -222,6 +331,48 @@ function inlineWithBreaks(raw) {
     .split(/\\\\\s*/g)
     .map((part) => inlineFormat(part.replace(/\n+/g, " ")))
     .join("<br>");
+}
+
+function renderTable(raw) {
+  // Strip \hline commands (use CSS borders instead)
+  let text = raw.replace(/\\hline\s*/g, "");
+
+  // Split by \\ (row endings)
+  const rows = text.split(/\\\\/g).filter((row) => row.trim());
+
+  const htmlRows = rows.map((row) => {
+    // Split by & but not inside braces
+    const cells = [];
+    let depth = 0;
+    let current = "";
+    for (let i = 0; i < row.length; i++) {
+      const ch = row[i];
+      if (ch === "{" || ch === "[") {
+        depth++;
+        current += ch;
+      } else if (ch === "}" || ch === "]") {
+        depth--;
+        current += ch;
+      } else if (ch === "&" && depth === 0) {
+        cells.push(current.trim());
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+    if (current.trim()) {
+      cells.push(current.trim());
+    }
+
+    if (cells.length === 0) return null;
+
+    const cellHtml = cells.map((cell) => {
+      return `<td>${inlineFormat(cell)}</td>`;
+    }).join("");
+    return `<tr>${cellHtml}</tr>`;
+  }).filter(Boolean).join("\n");
+
+  return `<div class="table-wrapper"><table>${htmlRows}</table></div>`;
 }
 
 function renderPartList(raw) {
@@ -358,13 +509,17 @@ function renderLines(text, state = { sectionNumber: 0, questionNumber: 0, usedHe
         output.push(`<section class="qa-card">${heading}${renderLines(collected.text, state)}</section>`);
       } else if (env === "answer") {
         output.push(renderAnswerBlock("answer-line", "答案：", collected.text));
-      } else if (env === "explanation" || env === "analysisenv") {
+      } else if (env === "explanation" || env === "analysisenv" || env === "solution") {
         output.push(renderAnswerBlock("explanation-line", "解析：", collected.text));
       } else if (["theorem", "lemma", "definition", "proposition", "corollary"].includes(env)) {
         const name = label ? ` (${inlineFormat(label)})` : "";
         output.push(`<div class="theorem"><strong>${env[0].toUpperCase()}${env.slice(1)}${name}.</strong> ${renderLines(collected.text, state)}</div>`);
       } else if (env === "proof") {
         output.push(`<div class="proof"><strong>Proof.</strong> ${renderLines(collected.text, state)}</div>`);
+      } else if (env === "tabular") {
+        output.push(renderTable(collected.text));
+      } else if (env === "tikzpicture") {
+        output.push(`<div class="tikz-placeholder"><p>📐 TikZ 图表（请在 PDF 版本中查看完整图表）</p></div>`);
       } else {
         output.push(`<div>${renderLines(collected.text, state)}</div>`);
       }
@@ -525,7 +680,7 @@ function fullUrl(pathname) {
 
 function pageShell({ title, description, body, pageClass = "" }) {
   const pageTitle = title === site.title ? site.title : `${title} | ${site.title}`;
-  const assetPrefix = pageClass === "article-page" ? "../" : "";
+  const assetPrefix = pageClass.split(/\s+/).includes("article-page") ? "../" : "";
   const assetVersion = (process.env.GITHUB_SHA || String(Date.now())).slice(0, 12);
   return `<!doctype html>
 <html lang="zh-CN">
@@ -673,7 +828,7 @@ function renderPost(post) {
   const headings = extractHeadings(post.html);
   const pdfUrl = articleAssetUrl(post.pdf);
   const pdfButton = pdfUrl ? `<a class="pdf-download" href="${escapeAttr(pdfUrl)}" download>下载 PDF</a>` : "";
-  const challengeButton = post.html.includes("answer-line") ? `<button class="quiz-challenge-start" data-challenge-start type="button">一站到底</button>` : "";
+  const challengeButton = post.challenge !== "false" && post.html.includes("answer-line") ? `<button class="quiz-challenge-start" data-challenge-start type="button">一站到底</button>` : "";
   const actionButtons = `${challengeButton}${pdfButton}`;
   const bookmarks = headings.map((heading) => {
     return `<a class="toc-level-${heading.level}" href="#${escapeAttr(heading.id)}">${escapeHtml(heading.title)}</a>`;
@@ -684,6 +839,7 @@ function renderPost(post) {
       ${bookmarks ? `<strong>文章书签</strong><nav>${bookmarks}</nav>` : ""}
     </div>
   </aside>` : "";
+  const inlineAnswers = post.inline_answers === "true";
   const body = `<main class="article-layout">
   <article class="article">
     <header class="article-header">
@@ -700,7 +856,7 @@ function renderPost(post) {
   </article>
   ${bookmarkPanel}
 </main>`;
-  return pageShell({ title: post.title, description: post.summary || site.description, body, pageClass: "article-page" });
+  return pageShell({ title: post.title, description: post.summary || site.description, body, pageClass: `article-page${inlineAnswers ? " inline-answers" : ""}` });
 }
 
 function renderFeed(posts) {

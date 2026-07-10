@@ -1,0 +1,907 @@
+% ---
+% title: 2025-2026学年第一学期数据结构真题解析
+% date: 2026-07-10
+% author: Crystal-Sky
+% tags: 数据结构, 算法, 期末考试
+% summary: 数据结构真题与详细解析。
+% pdf: assets/dataStructure.pdf
+% challenge: false
+% inline_answers: true
+% ---
+
+\documentclass[12pt,a4paper]{ctexart}
+
+\usepackage{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{array,booktabs,longtable}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+\geometry{left=2.2cm,right=2.2cm,top=2.3cm,bottom=2.3cm}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.35em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{2025--2026 第一学期数据结构真题}
+\fancyhead[R]{解析版}
+\fancyfoot[C]{\thepage}
+
+\definecolor{codegray}{RGB}{248,248,248}
+\definecolor{answerblue}{RGB}{30,80,150}
+\definecolor{darkgreen}{RGB}{0,110,70}
+
+\lstset{
+  language=C++,
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codegray},
+  frame=single,
+  breaklines=true,
+  columns=fullflexible,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue!70!black},
+  commentstyle=\color{darkgreen},
+  showstringspaces=false,
+  tabsize=4
+}
+
+\newenvironment{solution}
+{\par\noindent\textbf{\color{answerblue}【解析】}\ }
+{\par}
+
+\newenvironment{answer}
+{\par\noindent\textbf{\color{darkgreen}【答案】}\ }
+{\par}
+
+\title{\textbf{2025--2026 第一学期数据结构真题\\解析版}}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\begin{abstract}
+    本文主要记录2025-2026学年第一学期数据结构真题,有一个题目没有进行录入，是leetcode原题补全链表归并排序的合并代码。
+\end{abstract}
+
+% =========================================================
+\section{时间复杂度分析}
+
+\subsection*{题目 1}
+分析下列递归函数的时间复杂度：
+\begin{lstlisting}
+int f(int m)
+{
+    if(m <= 1) return 1;
+    else return f(m - 1) + f(m - 1) + f(m - 1);
+}
+\end{lstlisting}
+
+\begin{answer}
+\[
+\boxed{O(3^m)}
+\]
+\end{answer}
+
+\begin{solution}
+设运行时间为 $T(m)$。当 $m>1$ 时，函数会递归调用三次 $f(m-1)$，因此
+\[
+T(m)=3T(m-1)+O(1).
+\]
+不断展开可得
+\[
+T(m)=3^kT(m-k)+O(1+3+\cdots+3^{k-1}).
+\]
+取 $k=m-1$，得到
+\[
+T(m)=\Theta(3^m).
+\]
+因此时间复杂度为 $O(3^m)$，更准确地说是 $\Theta(3^m)$。
+\end{solution}
+
+\subsection*{题目 2}
+分析下列函数的时间复杂度：
+\begin{lstlisting}
+int sub2(int m, int n)
+{
+    int i, j, t, r = 0;
+    for (i = 0; i < n; i++)
+        for (j = 0; j <= n; j = j + 2) {
+            t = 1;
+            while (t < m / 2 - 1) t = t * 2;
+            r = r + t;
+        }
+    return r;
+}
+\end{lstlisting}
+
+\begin{answer}
+\[
+\boxed{O(n^2\log m)}
+\]
+\end{answer}
+
+\begin{solution}
+最外层循环执行 $n$ 次。
+
+第二层循环中 $j$ 每次增加 2，因此执行次数约为
+\[
+\frac{n}{2}+1=O(n).
+\]
+
+最内层 while 循环中，$t$ 从 1 开始不断乘 2：
+\[
+1,2,4,8,\dots
+\]
+直到达到 $m/2-1$，故执行次数为
+\[
+O(\log m).
+\]
+
+三层相乘：
+\[
+O(n)\cdot O(n)\cdot O(\log m)
+=
+\boxed{O(n^2\log m)}.
+\]
+\end{solution}
+
+% =========================================================
+\section{二叉排序树}
+
+已知一棵二叉排序树节点的数据为整数，其前序遍历序列如下：
+\[
+60,\ 40,\ 35,\ 48,\ 54,\ 69,\ 82.
+\]
+
+\subsection*{（1）画出该二叉排序树的逻辑结构}
+
+\begin{answer}
+二叉排序树如下：
+\end{answer}
+
+\begin{center}
+\begin{tikzpicture}[
+  level distance=1.5cm,
+  level 1/.style={sibling distance=5cm},
+  level 2/.style={sibling distance=2.6cm},
+  level 3/.style={sibling distance=2cm},
+  every node/.style={draw,circle,minimum size=8mm}
+]
+\node {60}
+  child {node {40}
+    child {node {35}}
+    child {node {48}
+      child[missing]
+      child {node {54}}
+    }
+  }
+  child {node {69}
+    child[missing]
+    child {node {82}}
+  };
+\end{tikzpicture}
+\end{center}
+
+\begin{solution}
+前序遍历的第一个元素 60 为根节点。
+
+随后按二叉排序树规则依次插入：
+
+\begin{itemize}[itemsep=0.2em]
+  \item 40 $<60$，放在 60 的左子树；
+  \item 35 $<60$ 且 $<40$，放在 40 左侧；
+  \item 48 $<60$ 且 $>40$，放在 40 右侧；
+  \item 54 $<60$、$>40$、$>48$，放在 48 右侧；
+  \item 69 $>60$，放在 60 右侧；
+  \item 82 $>60$ 且 $>69$，放在 69 右侧。
+\end{itemize}
+\end{solution}
+
+\subsection*{（2）根据前序遍历序列构造二叉排序树的算法思路}
+
+\begin{answer}
+依次扫描前序序列，将每个元素按照二叉排序树的插入规则插入当前树中即可。
+\end{answer}
+
+\begin{solution}
+设前序序列为 $a_1,a_2,\dots,a_n$：
+
+\begin{enumerate}
+  \item 先令 $a_1$ 为根节点；
+  \item 对 $i=2,3,\dots,n$：
+  \begin{itemize}
+    \item 若 $a_i$ 小于当前节点关键字，则进入左子树；
+    \item 若 $a_i$ 大于当前节点关键字，则进入右子树；
+    \item 直到遇到空指针，在该位置建立新节点。
+  \end{itemize}
+\end{enumerate}
+
+若树高为 $h$，单次插入复杂度为 $O(h)$，总复杂度为 $O(nh)$；
+平均情况下约为 $O(n\log n)$，最坏退化成链时为 $O(n^2)$。
+\end{solution}
+
+% =========================================================
+\section{多个栈共享连续存储空间}
+
+设有 $N(N>0)$ 个栈，其元素类型相同，在任何时刻这 $N$ 个栈的元素个数之和不超过
+$M(M>0)$，要求采用一片连续的内存空间存储这 $N$ 个栈。请给出一种实现方法，并说明进栈、
+出栈操作及时间复杂度。
+
+\begin{answer}
+采用“数组模拟链式栈 + 空闲链表”的方法。所有栈共享一块长度为 $M$ 的连续数组，
+每次进栈和出栈的时间复杂度均为
+\[
+\boxed{O(1)}.
+\]
+\end{answer}
+
+\begin{solution}
+开设如下连续数组与辅助变量：
+\begin{lstlisting}
+ElemType data[M]; // 存放元素
+int next[M];      // 模拟链指针
+int top[N];       // top[k] 为第 k 个栈的栈顶下标
+int freeHead;     // 空闲结点链表表头
+\end{lstlisting}
+
+初始化时：
+\[
+top[0]=top[1]=\cdots=top[N-1]=-1,
+\]
+并令
+\[
+0\to1\to2\to\cdots\to M-1
+\]
+组成空闲链表。
+
+\paragraph{进栈 push(k,x)}
+\begin{enumerate}
+  \item 从空闲链表取出一个下标 $p$；
+  \item 存入 $data[p]=x$；
+  \item 令 $next[p]=top[k]$；
+  \item 更新 $top[k]=p$。
+\end{enumerate}
+
+\paragraph{出栈 pop(k)}
+\begin{enumerate}
+  \item 取 $p=top[k]$；
+  \item 更新 $top[k]=next[p]$；
+  \item 将结点 $p$ 重新放回空闲链表。
+\end{enumerate}
+
+所有步骤只涉及常数次下标访问与赋值，因此：
+\[
+\boxed{T_{\mathrm{push}}=O(1),\qquad T_{\mathrm{pop}}=O(1)}.
+\]
+
+这种方法不会给每个栈预先固定空间，因此只要所有栈元素总数不超过 $M$，空间就可以充分共享。
+\end{solution}
+
+% =========================================================
+\section{关键路径}
+
+软件项目包含 7 个子任务：
+
+\begin{center}
+\begin{tabular}{ccc}
+\toprule
+子任务 & 持续时间（天） & 开始条件\\
+\midrule
+$a_1$ & 2 & 无\\
+$a_2$ & 3 & 无\\
+$a_3$ & 2 & $a_1$ 完成\\
+$a_4$ & 3 & $a_1$ 完成\\
+$a_5$ & 3 & $a_2$ 完成\\
+$a_6$ & 3 & $a_3$ 完成\\
+$a_7$ & 3 & $a_4$ 与 $a_5$ 均完成\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{（1）分别缩短 $a_1,a_2,a_6$ 的持续时间，能否使项目提前完成？}
+
+\begin{answer}
+\[
+\boxed{a_1:\text{不能}\qquad a_2:\text{能}\qquad a_6:\text{不能}}
+\]
+\end{answer}
+
+\begin{solution}
+计算各任务最早完成时间：
+
+\[
+\begin{aligned}
+EF(a_1)&=2,\\
+EF(a_2)&=3,\\
+EF(a_3)&=2+2=4,\\
+EF(a_4)&=2+3=5,\\
+EF(a_5)&=3+3=6,\\
+EF(a_6)&=4+3=7,\\
+ES(a_7)&=\max(5,6)=6,\\
+EF(a_7)&=6+3=9.
+\end{aligned}
+\]
+
+因此项目总工期为
+\[
+\boxed{9\text{ 天}}.
+\]
+
+主要路径长度：
+
+\[
+a_1\to a_3\to a_6:\quad 2+2+3=7,
+\]
+\[
+a_1\to a_4\to a_7:\quad 2+3+3=8,
+\]
+\[
+a_2\to a_5\to a_7:\quad 3+3+3=9.
+\]
+
+所以关键路径为
+\[
+\boxed{a_2\to a_5\to a_7}.
+\]
+
+\begin{itemize}
+  \item 缩短 $a_1$：$a_1$ 不在当前关键路径上，不能使 9 天工期提前；
+  \item 缩短 $a_2$：$a_2$ 位于关键路径上，适当缩短可使项目提前完成；
+  \item 缩短 $a_6$：该任务所在分支 7 天完成，早于总工期 9 天，不能使项目提前。
+\end{itemize}
+\end{solution}
+
+\subsection*{（2）判断给定子任务持续时间缩短能否使项目提前完成的算法思路}
+
+\begin{answer}
+将任务依赖关系建成 DAG，分别计算修改前、修改后的最长路径（项目工期），比较两者即可。
+\end{answer}
+
+\begin{solution}
+算法步骤：
+
+\begin{enumerate}
+  \item 将每个子任务及其先后约束建立成有向无环图；
+  \item 对 DAG 做拓扑排序；
+  \item 按拓扑序进行动态规划，计算每个任务的最早开始时间：
+  \[
+  ES(v)=\max_{u\to v}\{EF(u)\},
+  \qquad
+  EF(v)=ES(v)+d(v);
+  \]
+  \item 得到原项目总工期
+  \[
+  T=\max_v EF(v);
+  \]
+  \item 将指定任务持续时间改为缩短后的值 $d'(x)$，再次计算总工期 $T'$；
+  \item 若 $T'<T$，则能使项目提前完成；否则不能。
+\end{enumerate}
+
+该方法比单纯判断“任务是否在某一条关键路径上”更稳妥，因为当存在多条关键路径时，
+缩短其中一条路径上的单个任务未必能缩短整个项目工期。
+
+若有 $V$ 个任务、$E$ 条依赖关系，一次计算复杂度为
+\[
+\boxed{O(V+E)}.
+\]
+\end{solution}
+
+% =========================================================
+\section{算法设计一：Huffman 树权值序列}
+
+在 Huffman 树中，从根节点到叶节点路径上所经过节点（包括根和叶）的权值序列称为权值序列。
+节点权值为正整数。
+
+\subsection*{（1）判断下列两组序列能否属于同一棵 Huffman 树}
+
+\subsubsection*{第（1）组}
+\[
+36,20,11
+\qquad\text{和}\qquad
+36,16,12
+\]
+
+\begin{answer}
+\[
+\boxed{\text{可以}}
+\]
+\end{answer}
+
+\begin{solution}
+两条路径从根 36 后立即分叉为 20 与 16，且
+\[
+20+16=36.
+\]
+这满足同一父节点两个孩子权值之和等于父节点权值的要求。
+
+各路径对应的兄弟子树权值分别为：
+\[
+36-20=16,\quad 20-11=9,
+\]
+以及
+\[
+36-16=20,\quad 16-12=4.
+\]
+从根向叶观察，兄弟子树权值不出现违反 Huffman 合并次序的增大，因此可兼容。
+\end{solution}
+
+\subsubsection*{第（2）组}
+\[
+50,30,16,8
+\qquad\text{和}\qquad
+50,20,11,3
+\]
+
+\begin{answer}
+\[
+\boxed{\text{可以}}
+\]
+\end{answer}
+
+\begin{solution}
+两条路径在根 50 后分叉为 30 与 20，且
+\[
+30+20=50.
+\]
+
+第一条路径的兄弟权值为：
+\[
+20,\ 14,\ 8;
+\]
+第二条路径的兄弟权值为：
+\[
+30,\ 9,\ 8.
+\]
+均与 Huffman 自底向上的非递减合并次序相容，因此可以属于同一棵 Huffman 树。
+\end{solution}
+
+\subsubsection*{第（3）组}
+\[
+36,20,11
+\qquad\text{和}\qquad
+36,20,9,4,3
+\]
+
+\begin{answer}
+\[
+\boxed{\text{可以}}
+\]
+\end{answer}
+
+\begin{solution}
+两条路径共同经过
+\[
+36\to20,
+\]
+之后在节点 20 处分叉为 11 与 9，并且
+\[
+11+9=20.
+\]
+
+第二条路径继续：
+\[
+9\to4\to3,
+\]
+相应兄弟权值为
+\[
+9-4=5,\qquad 4-3=1.
+\]
+不存在结构冲突，因此可以兼容于同一棵 Huffman 树。
+\end{solution}
+
+\subsubsection*{第（4）组}
+\[
+50,14,9
+\qquad\text{和}\qquad
+50,36,10,5
+\]
+
+\begin{answer}
+\[
+\boxed{\text{不可以}}
+\]
+\end{answer}
+
+\begin{solution}
+根节点处虽然有
+\[
+14+36=50,
+\]
+但第二条路径中
+\[
+36\to10
+\]
+意味着节点 36 的另一个孩子权值必须为
+\[
+36-10=26.
+\]
+也就是说 36 要由 10 与 26 合并得到。
+
+然而根的另一棵子树权值为 14。按照 Huffman 算法，每一步必须选择当前权值最小的两个结点合并。
+当 10、14、26 同时作为候选子树存在时，不可能跳过较小的 14 而选择 10 与 26 合并，
+因此与 Huffman 贪心合并规则矛盾。
+
+所以不能属于同一棵 Huffman 树。
+\end{solution}
+
+\subsection*{（2）算法思路与 C/C++ 描述}
+
+\begin{answer}
+核心检查三类条件：
+\begin{enumerate}
+  \item 每条路径权值必须严格递减；
+  \item 两条路径第一次分叉时，两个分叉孩子权值之和必须等于共同父节点权值；
+  \item 由相邻节点差值得到的“兄弟子树权值”必须与 Huffman 自底向上的合并次序相容。
+\end{enumerate}
+\end{answer}
+
+\begin{solution}
+对序列
+\[
+s_0,s_1,\dots,s_{k-1}
+\]
+若它是一条根到叶路径，则每一步的兄弟子树权值为
+\[
+d_i=s_i-s_{i+1}.
+\]
+因为父节点权值等于两个孩子权值之和。
+
+按 Huffman 合并过程从叶向根看，被合并结点的权值总体不能逆着贪心次序变化；
+因此从根向叶看，相应兄弟子树权值不能出现明显的“先小后大”冲突。
+
+下面给出适合本题判定的课程级算法描述：
+
+\begin{lstlisting}
+#include <bits/stdc++.h>
+using namespace std;
+
+bool validPath(const vector<long long>& s) {
+    if (s.empty()) return false;
+
+    // 根到叶权值必须严格递减
+    for (int i = 0; i + 1 < (int)s.size(); ++i) {
+        if (s[i] <= s[i + 1]) return false;
+    }
+
+    // diff[i] 是该层另一棵兄弟子树的权值
+    vector<long long> diff;
+    for (int i = 0; i + 1 < (int)s.size(); ++i) {
+        diff.push_back(s[i] - s[i + 1]);
+    }
+
+    // 从根向叶，兄弟子树权值不应出现与 Huffman
+    // 自底向上非递减合并顺序冲突的增大
+    for (int i = 0; i + 1 < (int)diff.size(); ++i) {
+        if (diff[i] < diff[i + 1]) return false;
+    }
+
+    return true;
+}
+
+bool canBeInSameHuffmanTree(const vector<long long>& A,
+                            const vector<long long>& B) {
+    if (!validPath(A) || !validPath(B)) return false;
+    if (A[0] != B[0]) return false;  // 根权必须相同
+
+    int n = A.size(), m = B.size();
+    int p = 0;
+
+    // 找最长公共前缀
+    while (p < n && p < m && A[p] == B[p]) ++p;
+
+    // 两个不同叶路径中，一条不能是另一条的严格前缀
+    if (p == n || p == m) return false;
+
+    // 第一次分叉：两个孩子必须互为兄弟
+    // 它们的权值之和必须等于共同父节点
+    long long parent = A[p - 1];
+    if (A[p] + B[p] != parent) return false;
+
+    return true;
+}
+\end{lstlisting}
+
+设两序列长度分别为 $n,m$，扫描与检查均为线性时间，因此
+\[
+\boxed{O(n+m)}
+\]
+额外空间若不显式保存差分数组可降为
+\[
+\boxed{O(1)}.
+\]
+
+\textbf{说明：}上述判定采用本题常见的数据结构课程口径，即利用 Huffman 节点权值和、
+首次分叉兄弟关系以及贪心合并次序进行兼容性检查。
+\end{solution}
+
+% =========================================================
+\section{算法设计二：删除最小堆堆顶并重排}
+
+$n$ 个盒子按 $1\sim n$ 编号，卡片满足：
+\[
+2i\le n\Rightarrow b_i\le b_{2i},
+\]
+\[
+2i+1\le n\Rightarrow b_i\le b_{2i+1}.
+\]
+拿走编号 1 的卡片后，将其余 $n-1$ 张卡片重排到 $1\sim n-1$，仍满足该规则，
+并使翻看卡片标记值次数尽可能少。
+
+\subsection*{（1）算法思路}
+
+\begin{answer}
+该结构本质上是一个\textbf{小根堆}。删除堆顶后，将原来第 $n$ 个盒子的卡片移到根，
+再执行\textbf{向下调整（sift down）}。
+\end{answer}
+
+\begin{solution}
+具体步骤：
+
+\begin{enumerate}
+  \item 拿走盒子 1 中的最小元素；
+  \item 将盒子 $n$ 的最后一张卡片移动到盒子 1；
+  \item 当前结点若有两个孩子，只翻看两个孩子并选择标记值较小者；
+  \item 将当前卡片与较小孩子比较：
+  \begin{itemize}
+    \item 若当前值不大于较小孩子，调整结束；
+    \item 否则交换，并继续向下一层调整。
+  \end{itemize}
+\end{enumerate}
+
+为了减少翻看次数，已经翻看过的卡片值应缓存，不重复翻看。
+每下降一层至多新翻看两个孩子，路径高度为 $O(\log n)$。
+\end{solution}
+
+\subsection*{（2）C/C++ 算法描述与复杂度}
+
+\begin{lstlisting}
+#include <bits/stdc++.h>
+using namespace std;
+
+// b[1..n] 初始满足小根堆性质
+// 删除 b[1] 后，将堆规模变成 n-1
+void deleteMin(vector<int>& b, int& n) {
+    if (n <= 0) return;
+
+    // 将最后一个元素移到堆顶
+    b[1] = b[n];
+    --n;
+
+    int i = 1;
+
+    while (2 * i <= n) {
+        int child = 2 * i;  // 左孩子
+
+        // 若右孩子存在，选择更小的孩子
+        if (child + 1 <= n && b[child + 1] < b[child]) {
+            ++child;
+        }
+
+        // 已满足小根堆性质
+        if (b[i] <= b[child]) break;
+
+        swap(b[i], b[child]);
+        i = child;
+    }
+}
+\end{lstlisting}
+
+\begin{answer}
+时间复杂度：
+\[
+\boxed{O(\log n)}.
+\]
+\end{answer}
+
+\begin{solution}
+每次交换后至少下降一层，而完全二叉树高度为
+\[
+\lfloor\log_2 n\rfloor.
+\]
+因此向下调整最多进行 $O(\log n)$ 层。
+
+若按“翻看卡片”计数，并缓存已看过的值，则每层至多查看两个孩子，
+总查看次数也是
+\[
+\boxed{O(\log n)}.
+\]
+\end{solution}
+
+% =========================================================
+\section{最短路问题：按时间上线的城市}
+
+共有 $N$ 座城市，编号 $0$ 到 $N-1$。城市 $i$ 在时间 $u_i$ 上线，
+且
+\[
+u_0\le u_1\le\cdots\le u_{N-1}.
+\]
+有 $M$ 条无向带权边。询问 $(a,b,t)$ 按 $t$ 非递减给出：
+在第 $t$ 天，只允许经过已经上线的城市，求 $a$ 到 $b$ 的最短路；
+若不可达或端点未上线，输出 $-1$。
+
+\subsection*{算法思路}
+
+\begin{answer}
+采用\textbf{增量 Floyd 算法}。
+
+由于城市上线时间有序、询问时间也不下降，可以随着时间推进，
+把新上线的城市依次加入 Floyd 的“允许作为中间点”的集合。
+\end{answer}
+
+\begin{solution}
+初始化距离矩阵：
+\[
+dist[i][i]=0,
+\]
+有边 $(i,j,w)$ 时：
+\[
+dist[i][j]=dist[j][i]=w,
+\]
+其他为无穷大。
+
+维护指针 $k$，表示编号小于 $k$ 的城市已经作为中间点加入。
+
+处理询问 $(a,b,t)$ 前，不断加入所有满足
+\[
+u_k\le t
+\]
+的城市 $k$。每加入一个城市 $k$，执行一次 Floyd 松弛：
+\[
+dist[i][j]
+=
+\min\bigl(dist[i][j],\ dist[i][k]+dist[k][j]\bigr).
+\]
+
+然后：
+\begin{itemize}
+  \item 若 $u_a>t$ 或 $u_b>t$，输出 $-1$；
+  \item 若 $dist[a][b]=\infty$，输出 $-1$；
+  \item 否则输出 $dist[a][b]$。
+\end{itemize}
+\end{solution}
+
+\subsection*{C++ 参考代码}
+
+\begin{lstlisting}
+#include <bits/stdc++.h>
+using namespace std;
+
+using ll = long long;
+const ll INF = (1LL << 60);
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    int N, M;
+    cin >> N >> M;
+
+    vector<int> u(N);
+    for (int i = 0; i < N; ++i) cin >> u[i];
+
+    vector<vector<ll>> dist(N, vector<ll>(N, INF));
+    for (int i = 0; i < N; ++i) dist[i][i] = 0;
+
+    for (int e = 0; e < M; ++e) {
+        int x, y;
+        ll w;
+        cin >> x >> y >> w;
+        dist[x][y] = dist[y][x] = min(dist[x][y], w);
+    }
+
+    int Q;
+    cin >> Q;
+
+    int k = 0;  // [0, k-1] 已经被允许作为中间点
+
+    while (Q--) {
+        int a, b, t;
+        cin >> a >> b >> t;
+
+        // 按时间增量加入新上线城市
+        while (k < N && u[k] <= t) {
+            for (int i = 0; i < N; ++i) {
+                if (dist[i][k] == INF) continue;
+
+                for (int j = 0; j < N; ++j) {
+                    if (dist[k][j] == INF) continue;
+
+                    dist[i][j] = min(
+                        dist[i][j],
+                        dist[i][k] + dist[k][j]
+                    );
+                }
+            }
+            ++k;
+        }
+
+        // 源点或终点尚未上线
+        if (u[a] > t || u[b] > t || dist[a][b] == INF) {
+            cout << -1 << '\n';
+        } else {
+            cout << dist[a][b] << '\n';
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+\subsection*{复杂度分析}
+
+每个城市只会被加入一次。每加入一个城市 $k$，进行一次 $N^2$ 级别松弛，
+所以总计：
+\[
+\boxed{O(N^3)}.
+\]
+
+每个询问除增量更新外只需 $O(1)$ 输出判断，因此总时间复杂度为
+\[
+\boxed{O(N^3+Q)}.
+\]
+
+距离矩阵空间复杂度为
+\[
+\boxed{O(N^2)}.
+\]
+
+\subsection*{样例}
+
+输入：
+\begin{lstlisting}[language={}]
+4 5
+1 2 3 4
+0 2 1
+2 3 1
+3 1 2
+2 1 4
+0 3 5
+4
+2 0 2
+0 1 2
+0 1 3
+0 1 4
+\end{lstlisting}
+
+输出：
+\begin{lstlisting}[language={}]
+-1
+-1
+5
+4
+\end{lstlisting}
+
+\begin{solution}
+\begin{itemize}
+  \item $t=2$ 时城市 2 尚未上线，因此 $(2,0,2)$ 输出 $-1$；
+  \item $t=2$ 时虽然城市 0、1 已上线，但当前不存在仅经过已上线城市的可达路径，输出 $-1$；
+  \item $t=3$ 时城市 0、1、2 上线，可走 $0\to2\to1$，代价 $1+4=5$；
+  \item $t=4$ 时城市 3 也上线，可走 $0\to2\to3\to1$，代价 $1+1+2=4$。
+\end{itemize}
+\end{solution}
+
+% =========================================================
+\section*{总结}
+\addcontentsline{toc}{section}{总结}
+
+本卷主要考查以下知识点：
+\begin{enumerate}
+  \item 递归与多重循环的时间复杂度分析；
+  \item 二叉排序树的构造与遍历；
+  \item 多栈共享存储空间；
+  \item AOE/DAG 中的关键路径与项目工期；
+  \item Huffman 树权值关系与贪心合并思想；
+  \item 小根堆删除堆顶后的向下调整；
+  \item 按时间增量开放中间点的 Floyd 最短路。
+\end{enumerate}
+
+\end{document}

@@ -335,6 +335,42 @@
     }
   }
 
+  function setupInlineAnswerInteractions() {
+    if (!document.body.classList.contains("inline-answers")) {
+      return;
+    }
+
+    for (const answerLine of document.querySelectorAll(".answer-line")) {
+      const explanationLine = answerLine.nextElementSibling?.classList.contains("explanation-line") ? answerLine.nextElementSibling : null;
+      const controls = document.createElement("div");
+      const reveal = document.createElement("button");
+
+      answerLine.hidden = true;
+      if (explanationLine) {
+        explanationLine.hidden = true;
+      }
+
+      controls.className = "quiz-controls inline-answer-controls";
+      reveal.className = "quiz-button quiz-button-secondary";
+      reveal.type = "button";
+      reveal.textContent = "显示答案与解析";
+      controls.appendChild(reveal);
+      answerLine.before(controls);
+
+      reveal.addEventListener("click", () => {
+        const revealed = !answerLine.hidden;
+        answerLine.hidden = revealed;
+        if (explanationLine) {
+          explanationLine.hidden = revealed;
+        }
+        reveal.textContent = revealed ? "显示答案与解析" : "收起答案与解析";
+        if (!revealed && window.MathJax?.typesetPromise) {
+          window.MathJax.typesetPromise([answerLine, explanationLine].filter(Boolean)).catch(() => {});
+        }
+      });
+    }
+  }
+
   function setupChallengeMode() {
     const startButton = document.querySelector("[data-challenge-start]");
     const cards = Array.from(document.querySelectorAll(".qa-card"));
@@ -801,6 +837,7 @@
   setupDrawerSearch();
   setupCalendar();
   setupQuizInteractions();
+  setupInlineAnswerInteractions();
   setupChallengeMode();
   setupClickWords();
   setupTypewriter();
