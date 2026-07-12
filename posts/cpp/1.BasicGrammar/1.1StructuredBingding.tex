@@ -1,0 +1,845 @@
+% ---
+% title: C++17 结构化绑定
+% date: 2026-07-12
+% author: Crystal-Sky
+% tags: C++, C++17, 基础语法, 结构化绑定
+% summary: 系统介绍 C++17 结构化绑定的基本语法、数组与结构体拆分、pair/tuple、引用绑定及常见使用场景。
+% slug: cpp-structured-bindings
+% course: C++
+% course_slug: cpp
+% chapter: 基础语法
+% chapter_order: 1
+% lesson_order: 1
+% lesson_type: 基础语法
+% ---
+
+\documentclass[UTF8,12pt,a4paper]{ctexart}
+
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+
+\geometry{left=2.4cm,right=2.4cm,top=2.5cm,bottom=2.5cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{C++17 结构化绑定}
+\fancyfoot[C]{\thepage}
+
+\definecolor{codebg}{RGB}{247,248,250}
+\definecolor{keywordcolor}{RGB}{0,92,197}
+\definecolor{commentcolor}{RGB}{0,128,0}
+\definecolor{stringcolor}{RGB}{163,21,21}
+
+\lstset{
+    language=C++,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{keywordcolor}\bfseries,
+    commentstyle=\color{commentcolor},
+    stringstyle=\color{stringcolor},
+    backgroundcolor=\color{codebg},
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    tabsize=4,
+    showstringspaces=false,
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true
+}
+
+\newtcolorbox{conceptbox}[1]{
+    colback=blue!3,
+    colframe=blue!60!black,
+    title=#1,
+    fonttitle=\bfseries
+}
+
+\newtcolorbox{warningbox}[1]{
+    colback=red!3,
+    colframe=red!65!black,
+    title=#1,
+    fonttitle=\bfseries
+}
+
+\newtcolorbox{examplebox}[1]{
+    colback=green!3,
+    colframe=green!50!black,
+    title=#1,
+    fonttitle=\bfseries
+}
+
+\title{\textbf{C++17 结构化绑定}}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{学习目标}
+
+完成本节学习后，应能够：
+
+\begin{enumerate}[label=\arabic*.]
+    \item 理解结构化绑定的作用和基本语法；
+    \item 使用结构化绑定拆分数组、结构体、\texttt{pair} 和 \texttt{tuple}；
+    \item 正确区分值绑定、引用绑定和常量引用绑定；
+    \item 在范围 \texttt{for} 循环和 STL 容器中使用结构化绑定；
+    \item 识别结构化绑定中的常见错误。
+\end{enumerate}
+
+\section{什么是结构化绑定}
+
+结构化绑定（Structured Bindings）是 C++17 引入的一种语法。
+
+它允许程序员将一个由多个元素组成的对象拆分为若干个变量，从而减少使用
+\texttt{first}、\texttt{second}、\texttt{get<0>()} 等写法。
+
+\begin{conceptbox}{基本思想}
+结构化绑定可以理解为：
+
+\[
+\text{一个复合对象}
+\quad \longrightarrow \quad
+\text{多个具有名字的变量}
+\]
+
+例如，一个坐标对象中包含横坐标和纵坐标，可以直接拆分为变量 \texttt{x} 和 \texttt{y}。
+\end{conceptbox}
+
+传统写法：
+
+\begin{lstlisting}
+std::pair<int, int> point = {10, 20};
+
+int x = point.first;
+int y = point.second;
+\end{lstlisting}
+
+使用结构化绑定：
+
+\begin{lstlisting}
+std::pair<int, int> point = {10, 20};
+
+auto [x, y] = point;
+\end{lstlisting}
+
+此时：
+
+\begin{itemize}
+    \item \texttt{x} 的值为 10；
+    \item \texttt{y} 的值为 20。
+\end{itemize}
+
+\section{基本语法}
+
+结构化绑定的一般形式如下：
+
+\begin{lstlisting}
+auto [变量1, 变量2, ...] = 表达式;
+\end{lstlisting}
+
+也可以使用引用或常量引用：
+
+\begin{lstlisting}
+auto [a, b] = object;          // 值绑定
+auto& [a, b] = object;         // 引用绑定
+const auto& [a, b] = object;   // 常量引用绑定
+\end{lstlisting}
+
+\subsection{变量数量必须匹配}
+
+结构化绑定左侧变量的数量必须与对象中可拆分元素的数量一致。
+
+正确示例：
+
+\begin{lstlisting}
+std::pair<int, int> p = {1, 2};
+auto [x, y] = p;
+\end{lstlisting}
+
+错误示例：
+
+\begin{lstlisting}
+std::pair<int, int> p = {1, 2};
+auto [x] = p;       // 错误：pair 中有两个元素
+\end{lstlisting}
+
+\section{绑定数组}
+
+结构化绑定可以拆分普通数组。
+
+\begin{lstlisting}
+#include <iostream>
+using namespace std;
+
+int main() {
+    int arr[3] = {10, 20, 30};
+
+    auto [a, b, c] = arr;
+
+    cout << a << ' ' << b << ' ' << c << '\n';
+    return 0;
+}
+\end{lstlisting}
+
+输出结果：
+
+\begin{verbatim}
+10 20 30
+\end{verbatim}
+
+这里的 \texttt{a}、\texttt{b}、\texttt{c} 是数组元素的副本。
+
+修改这些变量不会改变原数组。
+
+\begin{lstlisting}
+int arr[3] = {10, 20, 30};
+
+auto [a, b, c] = arr;
+a = 100;
+
+cout << arr[0] << '\n';  // 输出 10
+\end{lstlisting}
+
+如果希望通过绑定变量修改原数组，应使用引用绑定：
+
+\begin{lstlisting}
+int arr[3] = {10, 20, 30};
+
+auto& [a, b, c] = arr;
+a = 100;
+
+cout << arr[0] << '\n';  // 输出 100
+\end{lstlisting}
+
+\section{绑定结构体}
+
+结构化绑定可以拆分成员均为公开成员的简单结构体。
+
+\begin{lstlisting}
+#include <iostream>
+#include <string>
+using namespace std;
+
+struct Student {
+    string name;
+    int age;
+    double score;
+};
+
+int main() {
+    Student stu{"Alice", 20, 95.5};
+
+    auto [name, age, score] = stu;
+
+    cout << name << '\n';
+    cout << age << '\n';
+    cout << score << '\n';
+
+    return 0;
+}
+\end{lstlisting}
+
+结构体成员的绑定顺序与成员的声明顺序一致：
+
+\begin{lstlisting}
+struct Student {
+    string name;   // 第一个
+    int age;       // 第二个
+    double score;  // 第三个
+};
+\end{lstlisting}
+
+因此：
+
+\begin{lstlisting}
+auto [name, age, score] = stu;
+\end{lstlisting}
+
+分别对应 \texttt{stu.name}、\texttt{stu.age} 和 \texttt{stu.score}。
+
+\begin{warningbox}{注意}
+结构化绑定依赖成员声明顺序，而不是变量名称。
+
+左侧变量可以使用任意合法名称，但顺序不能写错。
+\end{warningbox}
+
+例如：
+
+\begin{lstlisting}
+auto [a, b, c] = stu;
+\end{lstlisting}
+
+其中：
+
+\begin{itemize}
+    \item \texttt{a} 对应 \texttt{name}；
+    \item \texttt{b} 对应 \texttt{age}；
+    \item \texttt{c} 对应 \texttt{score}。
+\end{itemize}
+
+\section{绑定 \texttt{std::pair}}
+
+\texttt{std::pair} 中包含两个元素，分别是 \texttt{first} 和 \texttt{second}。
+
+传统写法：
+
+\begin{lstlisting}
+std::pair<std::string, int> student = {"Tom", 18};
+
+std::string name = student.first;
+int age = student.second;
+\end{lstlisting}
+
+结构化绑定写法：
+
+\begin{lstlisting}
+std::pair<std::string, int> student = {"Tom", 18};
+
+auto [name, age] = student;
+\end{lstlisting}
+
+完整示例：
+
+\begin{lstlisting}
+#include <iostream>
+#include <string>
+#include <utility>
+using namespace std;
+
+int main() {
+    pair<string, int> student = {"Tom", 18};
+
+    auto [name, age] = student;
+
+    cout << "姓名：" << name << '\n';
+    cout << "年龄：" << age << '\n';
+
+    return 0;
+}
+\end{lstlisting}
+
+\section{绑定 \texttt{std::tuple}}
+
+\texttt{std::tuple} 可以存储任意数量、任意类型的元素。
+
+传统写法：
+
+\begin{lstlisting}
+std::tuple<std::string, int, double> stu{"Bob", 19, 88.5};
+
+std::string name = std::get<0>(stu);
+int age = std::get<1>(stu);
+double score = std::get<2>(stu);
+\end{lstlisting}
+
+结构化绑定写法：
+
+\begin{lstlisting}
+auto [name, age, score] = stu;
+\end{lstlisting}
+
+完整示例：
+
+\begin{lstlisting}
+#include <iostream>
+#include <string>
+#include <tuple>
+using namespace std;
+
+int main() {
+    tuple<string, int, double> stu{"Bob", 19, 88.5};
+
+    auto [name, age, score] = stu;
+
+    cout << name << ' ' << age << ' ' << score << '\n';
+
+    return 0;
+}
+\end{lstlisting}
+
+\section{值绑定与引用绑定}
+
+结构化绑定中最重要的内容之一，是区分值绑定和引用绑定。
+
+\subsection{值绑定}
+
+语法：
+
+\begin{lstlisting}
+auto [a, b] = object;
+\end{lstlisting}
+
+此时会根据原对象创建一份新的绑定对象。
+
+通过绑定变量进行修改，通常不会影响原对象。
+
+\begin{lstlisting}
+std::pair<int, int> p = {10, 20};
+
+auto [x, y] = p;
+x = 100;
+
+cout << p.first << '\n';  // 输出 10
+\end{lstlisting}
+
+\subsection{引用绑定}
+
+语法：
+
+\begin{lstlisting}
+auto& [a, b] = object;
+\end{lstlisting}
+
+绑定变量直接引用原对象中的元素。
+
+\begin{lstlisting}
+std::pair<int, int> p = {10, 20};
+
+auto& [x, y] = p;
+x = 100;
+
+cout << p.first << '\n';  // 输出 100
+\end{lstlisting}
+
+\subsection{常量引用绑定}
+
+语法：
+
+\begin{lstlisting}
+const auto& [a, b] = object;
+\end{lstlisting}
+
+这种方式不会复制对象，同时禁止通过绑定变量修改元素。
+
+\begin{lstlisting}
+std::pair<int, int> p = {10, 20};
+
+const auto& [x, y] = p;
+
+cout << x << ' ' << y << '\n';
+// x = 100;  // 错误：x 是只读的
+\end{lstlisting}
+
+\subsection{三种方式对比}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+写法 & 是否复制 & 能否修改原对象 \\
+\midrule
+\texttt{auto [a,b]} & 是 & 否 \\
+\texttt{auto\& [a,b]} & 否 & 是 \\
+\texttt{const auto\& [a,b]} & 否 & 否 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{conceptbox}{选择建议}
+\begin{itemize}
+    \item 对象较小，且不需要修改原对象时，可使用 \texttt{auto}；
+    \item 需要修改原对象时，使用 \texttt{auto\&}；
+    \item 对象较大，只读访问时，优先使用 \texttt{const auto\&}。
+\end{itemize}
+\end{conceptbox}
+
+\section{在函数返回值中使用}
+
+结构化绑定非常适合接收包含多个结果的函数返回值。
+
+\subsection{返回 \texttt{pair}}
+
+\begin{lstlisting}
+#include <iostream>
+#include <utility>
+using namespace std;
+
+pair<int, int> divide(int a, int b) {
+    return {a / b, a % b};
+}
+
+int main() {
+    auto [quotient, remainder] = divide(17, 5);
+
+    cout << "商：" << quotient << '\n';
+    cout << "余数：" << remainder << '\n';
+
+    return 0;
+}
+\end{lstlisting}
+
+输出：
+
+\begin{verbatim}
+商：3
+余数：2
+\end{verbatim}
+
+\subsection{返回 \texttt{tuple}}
+
+\begin{lstlisting}
+#include <iostream>
+#include <tuple>
+using namespace std;
+
+tuple<int, int, double> analyze(int a, int b) {
+    int sum = a + b;
+    int product = a * b;
+    double average = (a + b) / 2.0;
+
+    return {sum, product, average};
+}
+
+int main() {
+    auto [sum, product, average] = analyze(4, 6);
+
+    cout << sum << '\n';
+    cout << product << '\n';
+    cout << average << '\n';
+
+    return 0;
+}
+\end{lstlisting}
+
+这种写法比使用多个输出参数更加直观。
+
+\section{在范围 \texttt{for} 循环中使用}
+
+结构化绑定经常与范围 \texttt{for} 循环结合使用。
+
+\subsection{遍历 \texttt{map}}
+
+传统写法：
+
+\begin{lstlisting}
+for (const auto& item : mp) {
+    cout << item.first << ' ' << item.second << '\n';
+}
+\end{lstlisting}
+
+结构化绑定写法：
+
+\begin{lstlisting}
+for (const auto& [key, value] : mp) {
+    cout << key << ' ' << value << '\n';
+}
+\end{lstlisting}
+
+完整示例：
+
+\begin{lstlisting}
+#include <iostream>
+#include <map>
+#include <string>
+using namespace std;
+
+int main() {
+    map<string, int> scores{
+        {"Alice", 95},
+        {"Bob", 88},
+        {"Tom", 91}
+    };
+
+    for (const auto& [name, score] : scores) {
+        cout << name << ": " << score << '\n';
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+\subsection{修改 \texttt{map} 中的值}
+
+如果需要修改容器中的值，应使用引用：
+
+\begin{lstlisting}
+for (auto& [name, score] : scores) {
+    score += 5;
+}
+\end{lstlisting}
+
+此时每个学生的分数都会增加 5。
+
+\begin{warningbox}{注意}
+\texttt{std::map} 的键是只读的。
+
+即使使用 \texttt{auto\& [key, value]}，也不能修改 \texttt{key}，但可以修改 \texttt{value}。
+\end{warningbox}
+
+\section{与集合插入操作结合}
+
+许多 STL 操作会返回 \texttt{pair}，结构化绑定可以使代码更清晰。
+
+例如，\texttt{set::insert} 会返回：
+
+\begin{lstlisting}
+pair<iterator, bool>
+\end{lstlisting}
+
+其中：
+
+\begin{itemize}
+    \item 第一个元素是指向对应元素的迭代器；
+    \item 第二个元素表示是否成功插入。
+\end{itemize}
+
+示例：
+
+\begin{lstlisting}
+#include <iostream>
+#include <set>
+using namespace std;
+
+int main() {
+    set<int> numbers;
+
+    auto [it1, success1] = numbers.insert(10);
+    auto [it2, success2] = numbers.insert(10);
+
+    cout << boolalpha;
+    cout << success1 << '\n';  // true
+    cout << success2 << '\n';  // false
+
+    return 0;
+}
+\end{lstlisting}
+
+这种写法比下面的传统形式更容易理解：
+
+\begin{lstlisting}
+auto result = numbers.insert(10);
+
+auto it = result.first;
+bool success = result.second;
+\end{lstlisting}
+
+\section{结构化绑定的作用域}
+
+结构化绑定变量与普通局部变量一样，受到作用域限制。
+
+\begin{lstlisting}
+int main() {
+    {
+        std::pair<int, int> p = {1, 2};
+        auto [x, y] = p;
+
+        std::cout << x << ' ' << y << '\n';
+    }
+
+    // std::cout << x;  // 错误：x 已离开作用域
+}
+\end{lstlisting}
+
+结构化绑定变量也不能与当前作用域内已有变量重名。
+
+\begin{lstlisting}
+int x = 10;
+std::pair<int, int> p = {1, 2};
+
+auto [x, y] = p;  // 错误：x 重复定义
+\end{lstlisting}
+
+\section{常见错误}
+
+\subsection{忘记启用 C++17}
+
+结构化绑定属于 C++17 特性。
+
+使用 GCC 或 Clang 编译时，应指定：
+
+\begin{verbatim}
+g++ main.cpp -std=c++17 -o main
+\end{verbatim}
+
+如果未启用 C++17，可能出现类似错误：
+
+\begin{verbatim}
+structured bindings only available with -std=c++17
+\end{verbatim}
+
+\subsection{绑定变量数量不匹配}
+
+\begin{lstlisting}
+std::tuple<int, int, int> t{1, 2, 3};
+
+auto [a, b] = t;  // 错误：tuple 中有三个元素
+\end{lstlisting}
+
+应改为：
+
+\begin{lstlisting}
+auto [a, b, c] = t;
+\end{lstlisting}
+
+\subsection{误以为值绑定会修改原对象}
+
+\begin{lstlisting}
+std::pair<int, int> p{1, 2};
+
+auto [x, y] = p;
+x = 100;
+
+cout << p.first;  // 仍然是 1
+\end{lstlisting}
+
+需要修改原对象时应使用：
+
+\begin{lstlisting}
+auto& [x, y] = p;
+\end{lstlisting}
+
+\subsection{在循环中不必要地复制}
+
+下面的代码会在每次循环时复制元素：
+
+\begin{lstlisting}
+for (auto [key, value] : mp) {
+    cout << key << ' ' << value << '\n';
+}
+\end{lstlisting}
+
+只读遍历时更推荐：
+
+\begin{lstlisting}
+for (const auto& [key, value] : mp) {
+    cout << key << ' ' << value << '\n';
+}
+\end{lstlisting}
+
+\subsection{尝试绑定私有成员}
+
+结构化绑定不能直接拆分具有不可访问成员的普通类对象。
+
+\begin{lstlisting}
+class Student {
+private:
+    string name;
+    int age;
+};
+\end{lstlisting}
+
+直接写：
+
+\begin{lstlisting}
+Student stu;
+auto [name, age] = stu;
+\end{lstlisting}
+
+通常会因为成员不可访问而编译失败。
+
+在基础教学中，可以先将结构化绑定用于简单结构体、数组、\texttt{pair} 和 \texttt{tuple}。
+
+\section{综合示例：学生成绩统计}
+
+下面的程序使用结构体、\texttt{vector}、结构化绑定和函数返回值，完成学生成绩统计。
+
+\begin{lstlisting}
+#include <iostream>
+#include <string>
+#include <tuple>
+#include <vector>
+using namespace std;
+
+struct Student {
+    string name;
+    int score;
+};
+
+tuple<int, int, double> analyze(const vector<Student>& students) {
+    int maximum = students.front().score;
+    int minimum = students.front().score;
+    int sum = 0;
+
+    for (const auto& [name, score] : students) {
+        if (score > maximum) {
+            maximum = score;
+        }
+
+        if (score < minimum) {
+            minimum = score;
+        }
+
+        sum += score;
+    }
+
+    double average =
+        static_cast<double>(sum) / students.size();
+
+    return {maximum, minimum, average};
+}
+
+int main() {
+    vector<Student> students{
+        {"Alice", 95},
+        {"Bob", 82},
+        {"Tom", 91}
+    };
+
+    for (const auto& [name, score] : students) {
+        cout << name << ": " << score << '\n';
+    }
+
+    auto [maximum, minimum, average] = analyze(students);
+
+    cout << "最高分：" << maximum << '\n';
+    cout << "最低分：" << minimum << '\n';
+    cout << "平均分：" << average << '\n';
+
+    return 0;
+}
+\end{lstlisting}
+
+
+\section{知识总结}
+
+\begin{conceptbox}{本节核心内容}
+\begin{enumerate}[label=\arabic*.]
+    \item 结构化绑定是 C++17 引入的语法；
+    \item 基本形式为 \texttt{auto [a,b,...] = object;}；
+    \item 可以绑定数组、简单结构体、\texttt{pair} 和 \texttt{tuple}；
+    \item \texttt{auto} 表示值绑定，\texttt{auto\&} 表示引用绑定；
+    \item \texttt{const auto\&} 适合高效的只读访问；
+    \item 结构化绑定常用于函数多返回值和 STL 容器遍历；
+    \item 编译时需要开启 C++17 标准。
+\end{enumerate}
+\end{conceptbox}
+
+\section{板书式速记}
+
+\begin{lstlisting}
+// 1. 基本语法
+auto [a, b] = object;
+
+// 2. 修改原对象
+auto& [a, b] = object;
+
+// 3. 只读且避免复制
+const auto& [a, b] = object;
+
+// 4. 遍历 map
+for (const auto& [key, value] : mp) {
+    // ...
+}
+
+// 5. 接收函数的多个返回值
+auto [x, y, z] = function();
+\end{lstlisting}
+
+\end{document}

@@ -1,0 +1,556 @@
+% ---
+% title: C++17 if 与 switch 初始化语句
+% date: 2026-07-12
+% author: Crystal-Sky
+% tags: C++, C++17, 基础语法, if, switch
+% summary: 介绍 C++17 中 if 与 switch 初始化语句的语法、变量作用域、结构化绑定组合及常见应用。
+% slug: cpp-if-switch-initializers
+% course: C++
+% course_slug: cpp
+% chapter: 基础语法
+% chapter_order: 1
+% lesson_order: 2
+% lesson_type: 基础语法
+% ---
+
+\documentclass[UTF8,12pt,a4paper]{ctexart}
+
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+
+\geometry{left=2.4cm,right=2.4cm,top=2.5cm,bottom=2.5cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{C++17 if 与 switch 初始化语句}
+\fancyhead[R]{教学讲义}
+\fancyfoot[C]{\thepage}
+
+\definecolor{codebg}{RGB}{247,248,250}
+\definecolor{keywordcolor}{RGB}{0,92,197}
+\definecolor{commentcolor}{RGB}{0,128,0}
+\definecolor{stringcolor}{RGB}{163,21,21}
+
+\lstset{
+    language=C++,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{keywordcolor}\bfseries,
+    commentstyle=\color{commentcolor},
+    stringstyle=\color{stringcolor},
+    backgroundcolor=\color{codebg},
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+    tabsize=4,
+    showstringspaces=false,
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true
+}
+
+\newtcolorbox{conceptbox}[1]{
+    colback=blue!3,
+    colframe=blue!60!black,
+    title=#1,
+    fonttitle=\bfseries
+}
+
+\newtcolorbox{warningbox}[1]{
+    colback=red!3,
+    colframe=red!65!black,
+    title=#1,
+    fonttitle=\bfseries
+}
+
+\newtcolorbox{examplebox}[1]{
+    colback=green!3,
+    colframe=green!50!black,
+    title=#1,
+    fonttitle=\bfseries
+}
+
+\title{\textbf{C++17 \texttt{if} 与 \texttt{switch} 初始化语句}}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{学习目标}
+
+完成本节学习后，应能够：
+
+\begin{enumerate}[label=\arabic*.]
+    \item 理解 C++17 中选择语句初始化器的作用；
+    \item 掌握 \texttt{if} 初始化语句的基本语法；
+    \item 掌握 \texttt{switch} 初始化语句的基本语法；
+    \item 理解初始化变量的作用域；
+    \item 在查找、加锁、解析返回值等场景中正确使用该语法；
+    \item 避免常见的作用域和语法错误。
+\end{enumerate}
+
+\section{什么是选择语句初始化器}
+
+在 C++17 之前，程序员通常需要先定义变量，再在 \texttt{if} 或 \texttt{switch} 中使用它。
+
+例如：
+
+\begin{lstlisting}
+auto it = mp.find("apple");
+
+if (it != mp.end()) {
+    std::cout << it->second << '\n';
+}
+\end{lstlisting}
+
+这里的变量 \texttt{it} 在整个外层作用域中都存在，即使它只在判断语句中使用。
+
+C++17 允许在 \texttt{if} 和 \texttt{switch} 的条件前直接写一条初始化语句：
+
+\begin{lstlisting}
+if (auto it = mp.find("apple"); it != mp.end()) {
+    std::cout << it->second << '\n';
+}
+\end{lstlisting}
+
+\begin{conceptbox}{核心思想}
+选择语句初始化器允许程序员：
+
+\begin{itemize}
+    \item 在进入判断前创建一个临时变量；
+    \item 在条件表达式中使用该变量；
+    \item 将变量的作用域限制在当前 \texttt{if} 或 \texttt{switch} 语句中。
+\end{itemize}
+\end{conceptbox}
+
+\section{\texttt{if} 初始化语句}
+
+\subsection{基本语法}
+
+C++17 中 \texttt{if} 初始化语句的基本形式如下：
+
+\begin{lstlisting}
+if (初始化语句; 条件表达式) {
+    // 条件成立时执行
+}
+\end{lstlisting}
+
+带 \texttt{else} 的形式：
+
+\begin{lstlisting}
+if (初始化语句; 条件表达式) {
+    // 条件成立
+} else {
+    // 条件不成立
+}
+\end{lstlisting}
+
+其中，初始化语句和条件表达式之间使用分号分隔。
+
+\begin{warningbox}{注意}
+初始化语句后必须写分号。
+
+正确：
+
+\begin{lstlisting}
+if (int x = getValue(); x > 0)
+\end{lstlisting}
+
+错误：
+
+\begin{lstlisting}
+if (int x = getValue() x > 0)
+\end{lstlisting}
+\end{warningbox}
+
+\subsection{最简单的示例}
+
+\begin{lstlisting}
+#include <iostream>
+using namespace std;
+
+int getValue() {
+    return 10;
+}
+
+int main() {
+    if (int x = getValue(); x > 0) {
+        cout << "x 是正数，x = " << x << '\n';
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+在这个例子中：
+
+\begin{enumerate}[label=\arabic*.]
+    \item 先执行 \texttt{int x = getValue()}；
+    \item 再判断 \texttt{x > 0}；
+    \item 如果条件成立，则进入 \texttt{if} 语句块。
+\end{enumerate}
+
+
+\section{结合结构化绑定使用}
+
+C++17 中，初始化语句还可以和结构化绑定一起使用。
+
+例如，\texttt{map::insert} 会返回一个 \texttt{pair}：
+
+\begin{itemize}
+    \item 第一个元素是迭代器；
+    \item 第二个元素表示是否插入成功。
+\end{itemize}
+
+\begin{lstlisting}
+#include <iostream>
+#include <map>
+#include <string>
+using namespace std;
+
+int main() {
+    map<string, int> scores;
+
+    if (auto [it, inserted] =
+            scores.insert({"Alice", 95});
+        inserted) {
+        cout << "插入成功" << '\n';
+    } else {
+        cout << "键已经存在" << '\n';
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+在条件表达式中直接判断 \texttt{inserted}。
+
+如果插入失败，仍可在 \texttt{else} 分支通过 \texttt{it} 访问已经存在的元素：
+
+\begin{lstlisting}
+if (auto [it, inserted] =
+        scores.insert({"Alice", 95});
+    inserted) {
+    cout << "插入成功" << '\n';
+} else {
+    cout << "已有分数：" << it->second << '\n';
+}
+\end{lstlisting}
+
+\section{处理函数返回值}
+
+如果一个函数返回状态码，可以在 \texttt{if} 中完成调用、保存结果和判断。
+
+\begin{lstlisting}
+#include <iostream>
+using namespace std;
+
+int connectServer() {
+    return 0;
+}
+
+int main() {
+    if (int code = connectServer(); code == 0) {
+        cout << "连接成功" << '\n';
+    } else {
+        cout << "连接失败，错误码：" << code << '\n';
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+这里的 \texttt{code} 只用于当前判断，因此不需要放到外层作用域。
+
+
+\section{\texttt{switch} 初始化语句}
+
+\subsection{基本语法}
+
+C++17 允许在 \texttt{switch} 中加入初始化语句：
+
+\begin{lstlisting}
+switch (初始化语句; 条件表达式) {
+    case 常量1:
+        // ...
+        break;
+
+    case 常量2:
+        // ...
+        break;
+
+    default:
+        // ...
+        break;
+}
+\end{lstlisting}
+
+\subsection{简单示例}
+
+\begin{lstlisting}
+#include <iostream>
+using namespace std;
+
+int getCommand() {
+    return 2;
+}
+
+int main() {
+    switch (int command = getCommand(); command) {
+        case 1:
+            cout << "添加" << '\n';
+            break;
+
+        case 2:
+            cout << "删除" << '\n';
+            break;
+
+        case 3:
+            cout << "查询" << '\n';
+            break;
+
+        default:
+            cout << "未知命令" << '\n';
+            break;
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+这里先定义变量 \texttt{command}，然后以 \texttt{command} 的值进行分支选择。
+
+\section{\texttt{switch} 初始化变量的作用域}
+
+初始化变量的作用域覆盖：
+
+\begin{itemize}
+    \item \texttt{switch} 条件表达式；
+    \item 所有 \texttt{case} 分支；
+    \item \texttt{default} 分支。
+\end{itemize}
+
+离开整个 \texttt{switch} 后，变量失效。
+
+\begin{lstlisting}
+switch (int code = getCommand(); code) {
+    case 1:
+        cout << code << '\n';
+        break;
+
+    default:
+        cout << code << '\n';
+        break;
+}
+
+// cout << code;  // 错误：code 已离开作用域
+\end{lstlisting}
+
+\section{\texttt{switch} 的实际应用}
+
+假设一个函数返回命令类型：
+
+\begin{lstlisting}
+enum class Command {
+    Add,
+    Remove,
+    Search,
+    Unknown
+};
+
+Command readCommand() {
+    return Command::Search;
+}
+\end{lstlisting}
+
+可以使用：
+
+\begin{lstlisting}
+switch (auto cmd = readCommand(); cmd) {
+    case Command::Add:
+        cout << "执行添加操作" << '\n';
+        break;
+
+    case Command::Remove:
+        cout << "执行删除操作" << '\n';
+        break;
+
+    case Command::Search:
+        cout << "执行查询操作" << '\n';
+        break;
+
+    default:
+        cout << "未知操作" << '\n';
+        break;
+}
+\end{lstlisting}
+
+这种写法把命令获取和命令分支处理放在同一个结构中。
+
+\section{\texttt{if} 与 \texttt{switch} 初始化语句对比}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+项目 & \texttt{if} 初始化语句 & \texttt{switch} 初始化语句 \\
+\midrule
+引入版本 & C++17 & C++17 \\
+分隔符 & 分号 & 分号 \\
+适用判断 & 任意布尔条件 & 整数、枚举等离散值 \\
+变量作用域 & 整个 \texttt{if--else} & 整个 \texttt{switch} \\
+常见用途 & 查找、插入、指针判断 & 命令码、状态码、枚举 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+
+\section{常见错误}
+
+\subsection{忘记写分号}
+
+错误：
+
+\begin{lstlisting}
+if (int x = getValue() x > 0) {
+}
+\end{lstlisting}
+
+正确：
+
+\begin{lstlisting}
+if (int x = getValue(); x > 0) {
+}
+\end{lstlisting}
+
+\subsection{在语句外使用变量}
+
+\begin{lstlisting}
+if (int x = 10; x > 0) {
+    cout << x << '\n';
+}
+
+cout << x << '\n';  // 错误
+\end{lstlisting}
+
+变量 \texttt{x} 的作用域只到 \texttt{if} 语句结束。
+
+\subsection{误以为只能定义变量}
+
+初始化语句不一定必须是变量声明，也可以是普通表达式语句。
+
+例如：
+
+\begin{lstlisting}
+int x = 0;
+
+if (x = getValue(); x > 0) {
+    cout << x << '\n';
+}
+\end{lstlisting}
+
+不过教学和实际开发中，更常见的是在初始化语句中声明局部变量。
+
+\subsection{在多个变量声明中使用不同类型}
+
+下面的写法错误：
+
+\begin{lstlisting}
+if (int x = 1, double y = 2.0; x < y) {
+}
+\end{lstlisting}
+
+同一条声明语句中不能这样混合声明不同类型。
+
+可以改为使用结构体、\texttt{pair} 或 \texttt{tuple}，或者提前声明其中一个变量。
+
+
+\section{综合示例：用户查询系统}
+
+\begin{lstlisting}
+#include <iostream>
+#include <map>
+#include <string>
+using namespace std;
+
+int main() {
+    map<string, int> users{
+        {"Alice", 1001},
+        {"Bob", 1002},
+        {"Tom", 1003}
+    };
+
+    string name;
+    cin >> name;
+
+    if (auto it = users.find(name);
+        it != users.end()) {
+        cout << "用户编号：" << it->second << '\n';
+    } else {
+        cout << "用户不存在" << '\n';
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+这个程序中，迭代器 \texttt{it} 只用于查询结果判断，因此放在 \texttt{if} 初始化语句中最合适。
+
+
+\section{知识总结}
+
+\begin{conceptbox}{本节核心内容}
+\begin{enumerate}[label=\arabic*.]
+    \item C++17 允许在 \texttt{if} 和 \texttt{switch} 中加入初始化语句；
+    \item 初始化语句和条件表达式之间使用分号分隔；
+    \item 初始化变量的作用域覆盖整个选择语句；
+    \item 离开选择语句后，初始化变量自动销毁；
+    \item 该语法特别适合容器查找、插入结果、函数状态码和命令处理；
+    \item 与结构化绑定结合时，可以写出更紧凑、清晰的代码。
+\end{enumerate}
+\end{conceptbox}
+
+\section{板书式速记}
+
+\begin{lstlisting}
+// if 初始化语句
+if (auto value = getValue(); value > 0) {
+    // ...
+} else {
+    // ...
+}
+
+// 容器查找
+if (auto it = mp.find(key); it != mp.end()) {
+    // ...
+}
+
+// 结构化绑定
+if (auto [it, inserted] = s.insert(x); inserted) {
+    // ...
+}
+
+// switch 初始化语句
+switch (auto cmd = getCommand(); cmd) {
+    case 1:
+        break;
+    default:
+        break;
+}
+\end{lstlisting}
+
+\end{document}

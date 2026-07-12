@@ -36,6 +36,10 @@ const template = `% ---
 % author: Crystal-Sky
 % tags: LaTeX
 % summary: 在这里写一句文章摘要。
+% course: 学习与写作工具
+% course_slug: learning-toolkit
+% lesson_order: 1
+% lesson_type: 课程讲义
 % ---
 
 \\section{引言}

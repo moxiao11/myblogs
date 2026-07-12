@@ -9,12 +9,60 @@ const assetsDir = path.join(root, "assets");
 
 const site = {
   title: "Crystal Sky",
-  subtitle: "LaTeX, algorithms, math, and notes",
-  description: "一个支持 LaTeX 写作与数学公式渲染的个人博客。",
+  subtitle: "把课程学成一张知识地图",
+  description: "面向大学课程的专题式学习站，整理讲义、题库、真题解析与复习路径。",
   author: "Crystal-Sky",
   oldBlog: "https://www.cnblogs.com/Crystal-Sky",
   baseUrl: (process.env.SITE_URL || "").replace(/\/$/, "")
 };
+
+const courseCatalog = [
+  {
+    slug: "cpp",
+    title: "C++",
+    eyebrow: "编程语言",
+    icon: "C++",
+    accent: "blue",
+    description: "从基础语法到现代 C++ 特性，按主题整理可直接查阅和练习的语言笔记。",
+    goals: ["掌握 C++ 基础语法", "理解现代 C++ 常用特性", "写出清晰且安全的程序"]
+  },
+  {
+    slug: "innovation-practice",
+    title: "创新实践与展示",
+    eyebrow: "创新素养",
+    icon: "✦",
+    accent: "coral",
+    description: "从 MOOC 题目到期末复盘，把零散概念整理成可检索、可练习的复习专题。",
+    goals: ["掌握课程核心概念", "熟悉常见题型", "形成期末复习框架"]
+  },
+  {
+    slug: "computer-organization",
+    title: "计算机组成原理",
+    eyebrow: "计算机基础",
+    icon: "▦",
+    accent: "violet",
+    description: "围绕数据表示、运算器、存储与指令系统，建立完整的期末复习知识链。",
+    goals: ["串联核心章节", "强化计算与分析", "集中训练期末题型"]
+  },
+  {
+    slug: "data-structures",
+    title: "数据结构",
+    eyebrow: "算法基础",
+    icon: "⌘",
+    accent: "teal",
+    description: "用真题解析连接复杂度、线性结构、树与图，关注解题过程而不只给出答案。",
+    goals: ["掌握复杂度分析", "理解经典数据结构", "训练算法解题思路"]
+  },
+  {
+    slug: "learning-toolkit",
+    title: "学习与写作工具",
+    eyebrow: "方法与工具",
+    icon: "✎",
+    accent: "blue",
+    description: "记录 LaTeX、知识整理与独立建站方法，让课程笔记更适合长期维护。",
+    goals: ["规范课程笔记", "提升公式排版", "建立个人知识库"]
+  }
+];
 
 const blockTokens = new Map();
 let tokenId = 0;
@@ -155,7 +203,7 @@ function preprocessLatex(body) {
     .replace(/\\newpage/g, "")
     .replace(/\\clearpage/g, "");
 
-  text = text.replace(/\\begin\{(verbatim|lstlisting)\}([\s\S]*?)\\end\{\1\}/g, (_, _env, code) => {
+  text = text.replace(/\\begin\{(verbatim|lstlisting)\}(?:\[[^\]]*\])?([\s\S]*?)\\end\{\1\}/g, (_, _env, code) => {
     return tokenFor(`<pre><code>${escapeHtml(code.trim())}</code></pre>`);
   });
 
@@ -181,6 +229,10 @@ function inlineFormat(raw) {
     return token;
   };
 
+  const codeText = (text) => String(text)
+    .replace(/\\textbackslash\{\}/g, "\\")
+    .replace(/\\([#$%&_{}])/g, "$1");
+
   let value = raw
     .replace(/\\href\{([^}]+)\}\{([^}]+)\}/g, (_, url, label) => {
       return hold(`<a href="${escapeAttr(url)}">${inlineFormat(label)}</a>`);
@@ -195,7 +247,7 @@ function inlineFormat(raw) {
       const safeColor = /^[a-zA-Z]+$/.test(color) ? color : "";
       return safeColor ? hold(`<span style="color:${safeColor}">${inlineFormat(text)}</span>`) : hold(inlineFormat(text));
     })
-    .replace(/\\texttt\{([^}]+)\}/g, (_, text) => hold(`<code>${escapeHtml(text)}</code>`))
+    .replace(/\\texttt\{([^}]+)\}/g, (_, text) => hold(`<code>${escapeHtml(codeText(text))}</code>`))
     .replace(/\\textsf\{([^}]+)\}/g, (_, text) => hold(inlineFormat(text)))
     .replace(/\\small\{([^}]*)\}/g, (_, text) => hold(`<small>${inlineFormat(text)}</small>`))
     .replace(/\\textbf\{([^}]+)\}/g, (_, text) => hold(`<strong>${inlineFormat(text)}</strong>`))
@@ -334,8 +386,8 @@ function inlineWithBreaks(raw) {
 }
 
 function renderTable(raw) {
-  // Strip \hline commands (use CSS borders instead)
-  let text = raw.replace(/\\hline\s*/g, "");
+  // Strip LaTeX rule commands (use CSS borders instead)
+  let text = raw.replace(/\\(?:hline|toprule|midrule|bottomrule)\s*/g, "");
 
   // Split by \\ (row endings)
   const rows = text.split(/\\\\/g).filter((row) => row.trim());
@@ -501,6 +553,9 @@ function renderLines(text, state = { sectionNumber: 0, questionNumber: 0, usedHe
         output.push(`<div class="center-block">${renderLines(collected.text, state)}</div>`);
       } else if (env === "knowledge") {
         output.push(`<aside class="knowledge-block"><strong>知识点：</strong>${renderLines(collected.text, state)}</aside>`);
+      } else if (["conceptbox", "warningbox", "examplebox"].includes(env)) {
+        const boxTitle = title ? `<strong>${inlineFormat(title)}</strong>` : "";
+        output.push(`<aside class="article-callout ${env}">${boxTitle}${renderLines(collected.text, state)}</aside>`);
       } else if (env === "question") {
         state.questionNumber += 1;
         const fallbackTitle = state.sectionNumber ? `题目 ${state.sectionNumber}.${state.questionNumber}` : "题目";
@@ -627,7 +682,10 @@ function generatePostPdf(post) {
   const workDir = path.join(root, "tmp", "latex-pdf", post.slug);
   ensureDir(workDir);
   const texFile = path.join(workDir, `${post.slug}.tex`);
-  fs.writeFileSync(texFile, pdfWrapper(post), "utf8");
+  const texSource = /\\documentclass(?:\[[^\]]+\])?\{/.test(post.body)
+    ? post.body
+    : pdfWrapper(post);
+  fs.writeFileSync(texFile, texSource, "utf8");
 
   const result = spawnSync("xelatex", [
     "-interaction=nonstopmode",
@@ -671,6 +729,35 @@ function postUrl(post) {
   return `posts/${post.slug}.html`;
 }
 
+function courseUrl(course) {
+  return `courses/${course.slug}.html`;
+}
+
+function courseForPost(post) {
+  return courseCatalog.find((course) => course.slug === post.course_slug)
+    || courseCatalog.find((course) => course.title === post.course)
+    || courseCatalog[courseCatalog.length - 1];
+}
+
+function collectCourses(posts) {
+  return courseCatalog
+    .map((course) => {
+      const lessons = posts
+        .filter((post) => courseForPost(post).slug === course.slug)
+        .sort((a, b) => {
+          const chapterOrder = Number(a.chapter_order || 999) - Number(b.chapter_order || 999);
+          return chapterOrder || Number(a.lesson_order || 999) - Number(b.lesson_order || 999);
+        });
+      return {
+        ...course,
+        lessons,
+        minutes: lessons.reduce((sum, lesson) => sum + lesson.minutes, 0),
+        updated: lessons.reduce((latest, lesson) => String(lesson.date) > String(latest) ? lesson.date : latest, "")
+      };
+    })
+    .filter((course) => course.lessons.length);
+}
+
 function fullUrl(pathname) {
   if (!site.baseUrl) {
     return pathname;
@@ -678,9 +765,11 @@ function fullUrl(pathname) {
   return `${site.baseUrl}/${pathname.replace(/^\/+/, "")}`;
 }
 
-function pageShell({ title, description, body, pageClass = "" }) {
+function pageShell({ title, description, body, pageClass = "", stats = {} }) {
   const pageTitle = title === site.title ? site.title : `${title} | ${site.title}`;
-  const assetPrefix = pageClass.split(/\s+/).includes("article-page") ? "../" : "";
+  const nestedPage = pageClass.split(/\s+/).some((name) => name === "article-page" || name === "course-page");
+  const assetPrefix = nestedPage ? "../" : "";
+  const homeHref = `${assetPrefix}index.html`;
   const assetVersion = (process.env.GITHUB_SHA || String(Date.now())).slice(0, 12);
   return `<!doctype html>
 <html lang="zh-CN">
@@ -726,23 +815,23 @@ function pageShell({ title, description, body, pageClass = "" }) {
         <div>关注：0</div>
       </div>
     </div>
-    <div class="drawer-stats">随笔 - 6&nbsp;&nbsp;文章 - 0&nbsp;&nbsp;评论 - 0&nbsp;&nbsp;阅读 - 297</div>
+    <div class="drawer-stats">${stats.courseCount || 4} 个课程专题 · ${stats.lessonCount || 5} 个学习单元</div>
     <label class="drawer-search">
       <span class="sr-only">搜索文章</span>
       <input data-drawer-search type="search" placeholder="找找看...">
       <span aria-hidden="true">⌕</span>
     </label>
     <nav class="drawer-nav" aria-label="侧边栏菜单">
-      <a href="${assetPrefix}index.html"><span>⌂</span><strong>首页</strong><em>i</em></a>
-      <a href="https://www.cnblogs.com/Crystal-Sky/category/algorithm.html"><span>⌘</span><strong>算法竞赛</strong><em>ii</em></a>
-      <a href="https://www.cnblogs.com/Crystal-Sky/category/2503943.html"><span>▣</span><strong>操作系统</strong><em>iii</em></a>
-      <a href="https://www.cnblogs.com/Crystal-Sky/category/frontend.html"><span>▤</span><strong>前端开发</strong><em>iv</em></a>
-      <a href="https://www.cnblogs.com/Crystal-Sky/archive.html"><span>☑</span><strong>随笔归档</strong><em>v</em></a>
-      <a href="https://github.com/moxiao11/myblogs"><span>⚙</span><strong>管理后台</strong><em>vi</em></a>
+      <a href="${homeHref}"><span>⌂</span><strong>学习首页</strong><em>i</em></a>
+      <a href="${homeHref}#courses"><span>▦</span><strong>课程专题</strong><em>ii</em></a>
+      <a href="${homeHref}#latest"><span>☑</span><strong>最近更新</strong><em>iii</em></a>
+      <a href="${assetPrefix}feed.xml"><span>◉</span><strong>订阅更新</strong><em>iv</em></a>
+      <a href="${escapeAttr(site.oldBlog)}"><span>↗</span><strong>博客园旧站</strong><em>v</em></a>
+      <a href="https://github.com/moxiao11/myblogs"><span>⚙</span><strong>课程仓库</strong><em>vi</em></a>
     </nav>
     <div class="drawer-calendar" data-calendar></div>
     <div class="drawer-bottom">
-      <a href="${assetPrefix}index.html">⌂ 首页</a>
+      <a href="${homeHref}">⌂ 首页</a>
       <a href="https://www.cnblogs.com/Crystal-Sky">➤ 联系</a>
       <a href="${assetPrefix}feed.xml">❤ 订阅</a>
       <a href="https://github.com/moxiao11/myblogs">⚙ 管理</a>
@@ -751,20 +840,21 @@ function pageShell({ title, description, body, pageClass = "" }) {
   <div class="site-shell">
     <header class="site-header">
       <div class="header-inner">
-        <a class="brand" href="${pageClass === "article-page" ? "../index.html" : "index.html"}">
+        <a class="brand" href="${homeHref}">
           <img src="${assetPrefix}assets/crystal-sky.svg" alt="">
           <span><strong>${escapeHtml(site.title)}</strong><span>${escapeHtml(site.subtitle)}</span></span>
         </a>
         <nav class="nav-links" aria-label="Primary">
-          <a href="${pageClass === "article-page" ? "../index.html" : "index.html"}">文章</a>
-          <a href="${pageClass === "article-page" ? "../feed.xml" : "feed.xml"}">RSS</a>
+          <a href="${homeHref}#courses">课程专题</a>
+          <a href="${homeHref}#latest">最近更新</a>
+          <a href="${assetPrefix}feed.xml">RSS</a>
           <a href="${escapeAttr(site.oldBlog)}">博客园旧站</a>
         </nav>
       </div>
     </header>
     ${body}
     <footer class="site-footer">
-      <div class="footer-inner">Copyright ${new Date().getFullYear()} ${escapeHtml(site.author)}. Built from LaTeX sources.</div>
+      <div class="footer-inner"><strong>${escapeHtml(site.title)}</strong><span>把零散笔记，整理成可以持续学习的课程。</span><span>© ${new Date().getFullYear()} ${escapeHtml(site.author)} · Built from LaTeX sources.</span></div>
     </footer>
   </div>
   <script src="${assetPrefix}assets/site.js?v=${assetVersion}"></script>
@@ -773,57 +863,155 @@ function pageShell({ title, description, body, pageClass = "" }) {
 }
 
 function renderIndex(posts) {
-  const cards = posts.map((post) => {
-    const haystack = `${post.title} ${post.summary} ${post.tags.join(" ")}`.toLowerCase();
-    const tags = post.tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
-    return `<a class="post-card" data-post-card data-search-text="${escapeAttr(haystack)}" href="${postUrl(post)}">
-  <h2>${escapeHtml(post.title)}</h2>
-  <p>${escapeHtml(post.summary || "打开文章阅读全文。")}</p>
-  <div class="meta">
-    <span>${escapeHtml(formatDate(post.date) || "未注明日期")}</span>
-    <span>${post.minutes} min read</span>
-    ${tags}
-  </div>
-</a>`;
+  const courses = collectCourses(posts);
+  const totalMinutes = posts.reduce((sum, post) => sum + post.minutes, 0);
+  const stats = { courseCount: courses.length, lessonCount: posts.length };
+  const courseCards = courses.map((course, index) => {
+    const haystack = `${course.title} ${course.description} ${course.lessons.map((lesson) => `${lesson.title} ${lesson.tags.join(" ")}`).join(" ")}`.toLowerCase();
+    const lessonPreview = course.lessons.slice(0, 3).map((lesson, lessonIndex) => (
+      `<li><span>${String(lessonIndex + 1).padStart(2, "0")}</span><strong>${escapeHtml(lesson.title)}</strong></li>`
+    )).join("");
+    return `<article class="course-card course-${escapeAttr(course.accent)}" data-search-item data-search-text="${escapeAttr(haystack)}">
+      <div class="course-card-top">
+        <span class="course-icon" aria-hidden="true">${course.icon}</span>
+        <span class="course-index">0${index + 1}</span>
+      </div>
+      <p class="course-eyebrow">${escapeHtml(course.eyebrow)}</p>
+      <h3>${escapeHtml(course.title)}</h3>
+      <p>${escapeHtml(course.description)}</p>
+      <ul class="course-preview">${lessonPreview}</ul>
+      <a class="course-enter" href="${courseUrl(course)}"><span>进入专题</span><span aria-hidden="true">→</span></a>
+    </article>`;
+  }).join("\n");
+  const latestLessons = posts.slice(0, 4).map((post) => {
+    const course = courseForPost(post);
+    const haystack = `${post.title} ${post.summary} ${post.tags.join(" ")} ${course.title}`.toLowerCase();
+    return `<a class="lesson-row" data-search-item data-search-text="${escapeAttr(haystack)}" href="${postUrl(post)}">
+      <span class="lesson-type">${escapeHtml(post.lesson_type || "课程讲义")}</span>
+      <span class="lesson-row-main"><strong>${escapeHtml(post.title)}</strong><small>${escapeHtml(course.title)} · ${post.minutes} 分钟阅读</small></span>
+      <time datetime="${escapeAttr(post.date)}">${escapeHtml(formatDate(post.date))}</time>
+      <span class="lesson-arrow" aria-hidden="true">↗</span>
+    </a>`;
   }).join("\n");
 
-  const body = `<section class="home-hero" id="top">
-  <div class="hero-content">
-    <h1>${escapeHtml(site.title)}</h1>
-    <p>愿你历经山河，仍觉人间值得</p>
-  </div>
-  <a class="scroll-down" href="#posts" aria-label="查看文章">⌄</a>
-</section>
-<main class="main-grid" id="posts">
-  <section>
-    <div class="toolbar">
-      <input class="search-input" data-search type="search" placeholder="搜索标题、摘要或标签" aria-label="搜索文章">
+  const body = `<main>
+  <section class="home-hero" id="top">
+    <div class="hero-orbit hero-orbit-one" aria-hidden="true"></div>
+    <div class="hero-orbit hero-orbit-two" aria-hidden="true"></div>
+    <div class="hero-content">
+      <p class="hero-kicker"><span></span> COURSE NOTES · LEARNING JOURNEY</p>
+      <h1>Crystal Sky</h1>
+      <p class="hero-motto">愿你历经山河，仍觉人间值得</p>
+      <p class="hero-description">把课程讲义、题库、真题解析与复习路径，整理成可以循序学习的温柔知识地图。</p>
+      <div class="hero-actions">
+        <a class="primary-action" href="#courses">开始学习 <span>→</span></a>
+        <a class="secondary-action" href="#latest">查看最近更新</a>
+      </div>
+      <div class="hero-stats" aria-label="站点内容统计">
+        <div><strong>${courses.length}</strong><span>课程专题</span></div>
+        <div><strong>${posts.length}</strong><span>学习单元</span></div>
+        <div><strong>${totalMinutes}</strong><span>分钟内容</span></div>
+      </div>
     </div>
-    <div class="post-list" data-post-list>
-      ${cards || `<div class="empty-state">还没有文章。运行 npm run new "文章标题" 创建第一篇。</div>`}
+    <div class="hero-board" aria-label="学习路径预览">
+      <div class="hero-board-head"><span>本期学习地图</span><span class="live-dot">持续更新</span></div>
+      ${courses.slice(0, 3).map((course, index) => `<a href="${courseUrl(course)}"><span class="board-number">0${index + 1}</span><span><strong>${escapeHtml(course.title)}</strong><small>${course.lessons.length} 个学习单元</small></span><em>→</em></a>`).join("")}
+      <div class="hero-board-note">从专题进入，按课时顺序学习；也可以直接搜索知识点。</div>
     </div>
-    <div class="empty-state" data-empty hidden>没有匹配的文章。</div>
   </section>
-  <aside class="side-panel">
-    <section class="panel">
-      <h2>写作方式</h2>
-      <ul>
-        <li>文章源文件：posts/*.tex</li>
-        <li>数学渲染：MathJax</li>
-        <li>发布目录：dist/</li>
-      </ul>
-    </section>
-    <section class="panel">
-      <h2>关于</h2>
-      <p>这是 Crystal-Sky 从博客园迁移出来的独立博客。旧文章可以逐步整理成 LaTeX 源文件并重新发布。</p>
-    </section>
-  </aside>
+
+  <section class="learning-section" id="courses">
+    <div class="section-heading">
+      <div><p>COURSE COLLECTION</p><h2>选择一个课程专题</h2></div>
+      <p>每个专题都有清晰的学习目标、章节顺序和配套资料，适合系统复习，也方便考前快速定位。</p>
+    </div>
+    <div class="course-search"><span aria-hidden="true">⌕</span><input data-search type="search" placeholder="搜索课程、题目或知识点…" aria-label="搜索课程内容"><kbd>⌘ K</kbd></div>
+    <div class="course-grid" data-search-results>${courseCards}</div>
+    <div class="empty-state" data-empty hidden>没有找到匹配的课程或内容。</div>
+  </section>
+
+  <section class="latest-section" id="latest">
+    <div class="section-heading compact"><div><p>LATEST LESSONS</p><h2>最近更新</h2></div><a href="feed.xml">订阅 RSS →</a></div>
+    <div class="lesson-rows">${latestLessons}</div>
+  </section>
+
+  <section class="learning-callout">
+    <div><p>学习不是收藏更多资料</p><h2>而是让知识之间，开始产生连接。</h2></div>
+    <p>专题会持续补充章节讲义、复习题和真题解析。选择一门课，从第一个学习单元开始。</p>
+    <a href="#courses">浏览全部课程 <span>↗</span></a>
+  </section>
 </main>`;
 
-  return pageShell({ title: site.title, description: site.description, body, pageClass: "home-page" });
+  return pageShell({ title: site.title, description: site.description, body, pageClass: "home-page", stats });
 }
 
-function renderPost(post) {
+function renderCourse(course, allCourses) {
+  const stats = {
+    courseCount: allCourses.length,
+    lessonCount: allCourses.reduce((sum, item) => sum + item.lessons.length, 0)
+  };
+  const renderLesson = (post, index) => {
+    const tags = post.tags.slice(0, 3).map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
+    return `<a class="course-lesson" href="../${postUrl(post)}">
+      <span class="course-lesson-index">${String(index + 1).padStart(2, "0")}</span>
+      <span class="course-lesson-content">
+        <span class="course-lesson-type">${escapeHtml(post.lesson_type || "课程讲义")}</span>
+        <strong>${escapeHtml(post.title)}</strong>
+        <small>${escapeHtml(post.summary || "打开本课时开始学习。")}</small>
+        <span class="course-lesson-tags">${tags}</span>
+      </span>
+      <span class="course-lesson-meta"><span>${post.minutes} min</span><time>${escapeHtml(formatDate(post.date))}</time><em>开始学习 →</em></span>
+    </a>`;
+  };
+  const hasChapters = course.lessons.some((post) => post.chapter);
+  let lessons;
+  if (hasChapters) {
+    const chapters = new Map();
+    for (const post of course.lessons) {
+      const chapter = post.chapter || "其他内容";
+      if (!chapters.has(chapter)) chapters.set(chapter, []);
+      chapters.get(chapter).push(post);
+    }
+    let lessonIndex = 0;
+    lessons = [...chapters.entries()].map(([chapter, chapterLessons], chapterIndex) => {
+      const items = chapterLessons.map((post) => renderLesson(post, lessonIndex++)).join("\n");
+      return `<section class="course-chapter">
+        <div class="course-chapter-heading"><span>${String(chapterIndex + 1).padStart(2, "0")}</span><h3>${escapeHtml(chapter)}</h3><small>${chapterLessons.length} 节</small></div>
+        <div class="course-chapter-lessons">${items}</div>
+      </section>`;
+    }).join("\n");
+  } else {
+    lessons = course.lessons.map(renderLesson).join("\n");
+  }
+  const goalList = course.goals.map((goal) => `<li><span>✓</span>${escapeHtml(goal)}</li>`).join("");
+  const body = `<main class="course-page-main">
+    <nav class="breadcrumb"><a href="../index.html">学习首页</a><span>/</span><span>课程专题</span><span>/</span><strong>${escapeHtml(course.title)}</strong></nav>
+    <section class="course-hero course-${escapeAttr(course.accent)}">
+      <div>
+        <p class="course-eyebrow">${escapeHtml(course.eyebrow)} · COURSE ${String(allCourses.indexOf(course) + 1).padStart(2, "0")}</p>
+        <h1>${escapeHtml(course.title)}</h1>
+        <p>${escapeHtml(course.description)}</p>
+        <div class="course-hero-meta"><span>${course.lessons.length} 个学习单元</span><span>约 ${course.minutes} 分钟</span><span>更新于 ${escapeHtml(formatDate(course.updated))}</span></div>
+      </div>
+      <span class="course-hero-icon" aria-hidden="true">${course.icon}</span>
+    </section>
+    <div class="course-layout">
+      <section class="course-curriculum">
+        <div class="curriculum-heading"><div><p>CURRICULUM</p><h2>课程目录</h2></div><span>${course.lessons.length} / ${course.lessons.length} 已发布</span></div>
+        <div class="course-lessons">${lessons}</div>
+      </section>
+      <aside class="course-sidebar">
+        <section><p>LEARNING GOALS</p><h2>学完你将能够</h2><ul>${goalList}</ul></section>
+        <section class="course-tip"><span>学习建议</span><p>先按目录顺序通读，再结合题库与真题查漏补缺。长文可以使用右侧书签快速跳转。</p></section>
+        <a class="back-all-courses" href="../index.html#courses">← 返回全部课程</a>
+      </aside>
+    </div>
+  </main>`;
+  return pageShell({ title: course.title, description: course.description, body, pageClass: "course-page", stats });
+}
+
+function renderPost(post, allCourses) {
+  const course = allCourses.find((item) => item.slug === courseForPost(post).slug);
   const tags = post.tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
   const headings = extractHeadings(post.html);
   const pdfUrl = articleAssetUrl(post.pdf);
@@ -840,7 +1028,10 @@ function renderPost(post) {
     </div>
   </aside>` : "";
   const inlineAnswers = post.inline_answers === "true";
-  const body = `<main class="article-layout">
+  const stats = { courseCount: allCourses.length, lessonCount: allCourses.reduce((sum, item) => sum + item.lessons.length, 0) };
+  const chapterCrumb = post.chapter ? `<span>/</span><span>${escapeHtml(post.chapter)}</span>` : "";
+  const body = `<nav class="article-breadcrumb breadcrumb"><a href="../index.html">学习首页</a><span>/</span><a href="../${courseUrl(course)}">${escapeHtml(course.title)}</a>${chapterCrumb}<span>/</span><strong>${escapeHtml(post.title)}</strong></nav>
+<main class="article-layout">
   <article class="article">
     <header class="article-header">
       <h1>${escapeHtml(post.title)}</h1>
@@ -856,7 +1047,7 @@ function renderPost(post) {
   </article>
   ${bookmarkPanel}
 </main>`;
-  return pageShell({ title: post.title, description: post.summary || site.description, body, pageClass: `article-page${inlineAnswers ? " inline-answers" : ""}` });
+  return pageShell({ title: post.title, description: post.summary || site.description, body, pageClass: `article-page${inlineAnswers ? " inline-answers" : ""}`, stats });
 }
 
 function renderFeed(posts) {
@@ -879,8 +1070,8 @@ function renderFeed(posts) {
 </rss>`;
 }
 
-function renderSitemap(posts) {
-  const urls = ["index.html", ...posts.map(postUrl)].map((url) => `<url><loc>${escapeHtml(fullUrl(url))}</loc></url>`).join("\n");
+function renderSitemap(posts, courses = []) {
+  const urls = ["index.html", ...courses.map(courseUrl), ...posts.map(postUrl)].map((url) => `<url><loc>${escapeHtml(fullUrl(url))}</loc></url>`).join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls}
@@ -907,11 +1098,23 @@ function copyAssets() {
 
 function loadPosts() {
   ensureDir(postsDir);
-  return fs.readdirSync(postsDir)
-    .filter((file) => file.endsWith(".tex"))
-    .map((file) => {
-      const filePath = path.join(postsDir, file);
+  const findTexFiles = (dir) => fs.readdirSync(dir, { withFileTypes: true })
+    .flatMap((entry) => {
+      const entryPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) return findTexFiles(entryPath);
+      return entry.isFile() && entry.name.endsWith(".tex") ? [entryPath] : [];
+    });
+
+  return findTexFiles(postsDir)
+    .map((filePath) => {
       const source = fs.readFileSync(filePath, "utf8");
+      const relativeSource = path.relative(postsDir, filePath);
+      const isNested = path.dirname(relativeSource) !== ".";
+      const hasMeta = /^(?:\uFEFF)?%\s*---\s*(?:\r?\n)/.test(source.slice(0, 100));
+      if (isNested && !hasMeta) {
+        console.warn(`Skipped draft without metadata: ${relativeSource}`);
+        return null;
+      }
       const { meta, body } = parseMeta(source, filePath);
       const html = renderLatex(body);
       return {
@@ -919,9 +1122,10 @@ function loadPosts() {
         body,
         html,
         minutes: readingTime(html),
-        source: file
+        source: relativeSource
       };
     })
+    .filter(Boolean)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
 
@@ -934,6 +1138,7 @@ function build() {
   cleanDist();
   copyAssets();
   const posts = loadPosts();
+  const courses = collectCourses(posts);
 
   for (const post of posts) {
     if (!post.pdf) {
@@ -945,17 +1150,22 @@ function build() {
   }
 
   for (const post of posts) {
-    writeFile(path.join(distDir, postUrl(post)), renderPost(post));
+    writeFile(path.join(distDir, postUrl(post)), renderPost(post, courses));
+  }
+
+  for (const course of courses) {
+    writeFile(path.join(distDir, courseUrl(course)), renderCourse(course, courses));
   }
 
   writeFile(path.join(distDir, "index.html"), renderIndex(posts));
   writeFile(path.join(distDir, "404.html"), renderIndex(posts));
   writeFile(path.join(distDir, "feed.xml"), renderFeed(posts));
-  writeFile(path.join(distDir, "sitemap.xml"), renderSitemap(posts));
+  writeFile(path.join(distDir, "sitemap.xml"), renderSitemap(posts, courses));
   writeFile(path.join(distDir, ".nojekyll"), "");
   writeFile(path.join(distDir, "search-index.json"), JSON.stringify(posts.map((post) => ({
     title: post.title,
     url: postUrl(post),
+    course: courseForPost(post).title,
     summary: post.summary,
     tags: post.tags,
     date: post.date

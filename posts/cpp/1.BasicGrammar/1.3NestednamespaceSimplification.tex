@@ -1,0 +1,899 @@
+% ---
+% title: C++17 嵌套命名空间简化语法
+% date: 2026-07-12
+% author: Crystal-Sky
+% tags: C++, C++17, 基础语法, 命名空间
+% summary: 介绍 C++17 嵌套命名空间简化语法、名称访问、命名空间别名以及常见使用注意事项。
+% slug: cpp-nested-namespace-syntax
+% course: C++
+% course_slug: cpp
+% chapter: 基础语法
+% chapter_order: 1
+% lesson_order: 3
+% lesson_type: 基础语法
+% ---
+
+\documentclass[UTF8,12pt,a4paper]{ctexart}
+
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+
+\geometry{left=2.4cm,right=2.4cm,top=2.5cm,bottom=2.5cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{C++17 嵌套命名空间简化语法}
+\fancyhead[R]{教学讲义}
+\fancyfoot[C]{\thepage}
+
+\definecolor{codebg}{RGB}{247,248,250}
+\definecolor{keywordcolor}{RGB}{0,92,197}
+\definecolor{commentcolor}{RGB}{0,128,0}
+\definecolor{stringcolor}{RGB}{163,21,21}
+
+\lstset{
+    language=C++,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{keywordcolor}\bfseries,
+    commentstyle=\color{commentcolor},
+    stringstyle=\color{stringcolor},
+    backgroundcolor=\color{codebg},
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+    tabsize=4,
+    showstringspaces=false,
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true
+}
+
+\newtcolorbox{conceptbox}[1]{
+    colback=blue!3,
+    colframe=blue!60!black,
+    title=#1,
+    fonttitle=\bfseries
+}
+
+\newtcolorbox{warningbox}[1]{
+    colback=red!3,
+    colframe=red!65!black,
+    title=#1,
+    fonttitle=\bfseries
+}
+
+\newtcolorbox{examplebox}[1]{
+    colback=green!3,
+    colframe=green!50!black,
+    title=#1,
+    fonttitle=\bfseries
+}
+
+\title{\textbf{C++17 嵌套命名空间简化语法}}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{学习目标}
+
+完成本节学习后，应能够：
+
+\begin{enumerate}[label=\arabic*.]
+    \item 理解命名空间的作用；
+    \item 掌握传统嵌套命名空间的写法；
+    \item 掌握 C++17 嵌套命名空间简化语法；
+    \item 理解命名空间中名称的访问方式；
+    \item 正确使用命名空间别名和 \texttt{using} 声明；
+    \item 识别嵌套命名空间中的常见错误。
+\end{enumerate}
+
+\section{什么是命名空间}
+
+命名空间（namespace）用于组织程序中的名称，避免不同代码模块之间出现命名冲突。
+
+例如，两个模块中都可能定义名为 \texttt{print} 的函数：
+
+\begin{lstlisting}
+namespace ModuleA {
+    void print() {
+        // 模块 A 的输出函数
+    }
+}
+
+namespace ModuleB {
+    void print() {
+        // 模块 B 的输出函数
+    }
+}
+\end{lstlisting}
+
+调用时使用作用域解析运算符 \texttt{::}：
+
+\begin{lstlisting}
+ModuleA::print();
+ModuleB::print();
+\end{lstlisting}
+
+\begin{conceptbox}{命名空间的主要作用}
+\begin{itemize}
+    \item 防止名称冲突；
+    \item 按模块组织代码；
+    \item 提高大型项目的可读性；
+    \item 表明类、函数或变量属于哪个功能区域。
+\end{itemize}
+\end{conceptbox}
+
+\section{为什么需要嵌套命名空间}
+
+大型项目通常需要多层分类。
+
+例如，一个网络库中可能包含 HTTP 模块和工具模块：
+
+\begin{lstlisting}
+project
+└── network
+    └── http
+        └── client
+\end{lstlisting}
+
+在 C++ 中，可以使用多层命名空间表示这种层次关系：
+
+\begin{lstlisting}
+namespace project {
+    namespace network {
+        namespace http {
+            class Client {
+            };
+        }
+    }
+}
+\end{lstlisting}
+
+类 \texttt{Client} 的完整名称是：
+
+\begin{lstlisting}
+project::network::http::Client
+\end{lstlisting}
+
+\section{C++17 之前的传统写法}
+
+在 C++17 之前，嵌套命名空间必须逐层书写。
+
+\begin{lstlisting}
+namespace school {
+    namespace computer {
+        namespace algorithm {
+
+            void solve() {
+                // ...
+            }
+
+        }
+    }
+}
+\end{lstlisting}
+
+这种写法的问题是：
+
+\begin{itemize}
+    \item 大括号层数较多；
+    \item 缩进较深；
+    \item 代码末尾容易出现大量难以辨认的右大括号；
+    \item 修改命名空间层次时比较麻烦。
+\end{itemize}
+
+
+\section{C++17 嵌套命名空间简化语法}
+
+C++17 引入了嵌套命名空间简化语法。
+
+可以使用连续的作用域解析运算符 \texttt{::}，在一条声明中定义多层命名空间。
+
+\subsection{基本语法}
+
+\begin{lstlisting}
+namespace 外层命名空间::内层命名空间 {
+    // 成员
+}
+\end{lstlisting}
+
+多层形式：
+
+\begin{lstlisting}
+namespace A::B::C {
+    // 成员
+}
+\end{lstlisting}
+
+
+\begin{conceptbox}{核心语法}
+\begin{lstlisting}
+namespace A::B::C {
+    // 相当于依次进入 A、B、C 三层命名空间
+}
+\end{lstlisting}
+\end{conceptbox}
+
+\section{完整示例}
+
+\begin{lstlisting}
+#include <iostream>
+using namespace std;
+
+namespace company::project::network {
+
+void connect() {
+    cout << "连接服务器" << '\n';
+}
+
+}
+
+int main() {
+    company::project::network::connect();
+    return 0;
+}
+\end{lstlisting}
+
+程序输出：
+
+\begin{verbatim}
+连接服务器
+\end{verbatim}
+
+函数 \texttt{connect} 属于三层命名空间：
+
+\begin{lstlisting}
+company::project::network
+\end{lstlisting}
+
+因此完整调用形式是：
+
+\begin{lstlisting}
+company::project::network::connect();
+\end{lstlisting}
+
+\section{定义变量、函数和类}
+
+嵌套命名空间中可以定义变量、函数、类、枚举和类型别名。
+
+\subsection{定义变量}
+
+\begin{lstlisting}
+namespace app::config {
+
+int port = 8080;
+bool debug = true;
+
+}
+\end{lstlisting}
+
+访问方式：
+
+\begin{lstlisting}
+std::cout << app::config::port << '\n';
+\end{lstlisting}
+
+\subsection{定义函数}
+
+\begin{lstlisting}
+namespace app::util {
+
+int add(int a, int b) {
+    return a + b;
+}
+
+}
+\end{lstlisting}
+
+调用方式：
+
+\begin{lstlisting}
+int result = app::util::add(3, 5);
+\end{lstlisting}
+
+\subsection{定义类}
+
+\begin{lstlisting}
+namespace app::model {
+
+class Student {
+public:
+    void show() const {
+        std::cout << "Student" << '\n';
+    }
+};
+
+}
+\end{lstlisting}
+
+使用方式：
+
+\begin{lstlisting}
+app::model::Student stu;
+stu.show();
+\end{lstlisting}
+
+\section{在命名空间外定义函数}
+
+可以先在命名空间中声明函数，再在命名空间外使用完整名称定义函数。
+
+\begin{lstlisting}
+#include <iostream>
+
+namespace app::math {
+
+int add(int a, int b);
+
+}
+
+int app::math::add(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    std::cout << app::math::add(2, 3) << '\n';
+}
+\end{lstlisting}
+
+这种方式常用于头文件与源文件分离的项目。
+
+\subsection{头文件示例}
+
+\begin{lstlisting}
+// math.h
+#pragma once
+
+namespace app::math {
+
+int add(int a, int b);
+
+}
+\end{lstlisting}
+
+\subsection{源文件示例}
+
+\begin{lstlisting}
+// math.cpp
+#include "math.h"
+
+int app::math::add(int a, int b) {
+    return a + b;
+}
+\end{lstlisting}
+
+也可以重新进入该命名空间后定义：
+
+\begin{lstlisting}
+#include "math.h"
+
+namespace app::math {
+
+int add(int a, int b) {
+    return a + b;
+}
+
+}
+\end{lstlisting}
+
+\section{多次打开同一个命名空间}
+
+同一个命名空间可以在多个位置重复定义或打开。
+
+\begin{lstlisting}
+namespace app::util {
+
+void print();
+
+}
+
+namespace app::util {
+
+void log();
+
+}
+\end{lstlisting}
+
+这两个代码块中的成员都属于同一个命名空间 \texttt{app::util}。
+
+完整示例：
+
+\begin{lstlisting}
+#include <iostream>
+using namespace std;
+
+namespace app::util {
+
+void print() {
+    cout << "print" << '\n';
+}
+
+}
+
+namespace app::util {
+
+void log() {
+    cout << "log" << '\n';
+}
+
+}
+
+int main() {
+    app::util::print();
+    app::util::log();
+    return 0;
+}
+\end{lstlisting}
+
+\section{命名空间别名}
+
+命名空间层级较深时，完整名称可能很长。
+
+例如：
+
+\begin{lstlisting}
+company::project::network::http::Client
+\end{lstlisting}
+
+可以使用命名空间别名简化访问。
+
+\subsection{基本语法}
+
+\begin{lstlisting}
+namespace 别名 = 原命名空间;
+\end{lstlisting}
+
+示例：
+
+\begin{lstlisting}
+namespace company::project::network::http {
+
+void request() {
+}
+
+}
+
+namespace http = company::project::network::http;
+
+int main() {
+    http::request();
+}
+\end{lstlisting}
+
+\begin{conceptbox}{命名空间别名}
+命名空间别名不会创建新的命名空间，只是为已有命名空间提供一个较短的名称。
+\end{conceptbox}
+
+\section{\texttt{using} 声明与 \texttt{using namespace}}
+
+\subsection{引入单个名称}
+
+可以使用 \texttt{using} 声明引入某一个名称：
+
+\begin{lstlisting}
+namespace app::math {
+
+int add(int a, int b) {
+    return a + b;
+}
+
+}
+
+using app::math::add;
+
+int main() {
+    int result = add(1, 2);
+}
+\end{lstlisting}
+
+这种方式只引入 \texttt{add}，不会引入整个命名空间中的所有成员。
+
+\subsection{引入整个命名空间}
+
+\begin{lstlisting}
+using namespace app::math;
+\end{lstlisting}
+
+之后可以直接使用其中的名称：
+
+\begin{lstlisting}
+int result = add(1, 2);
+\end{lstlisting}
+
+\begin{warningbox}{教学与工程建议}
+在头文件中一般不要使用：
+
+\begin{lstlisting}
+using namespace 某个命名空间;
+\end{lstlisting}
+
+因为它会把大量名称引入包含该头文件的文件，可能导致名称冲突。
+
+更推荐：
+
+\begin{itemize}
+    \item 使用完整限定名；
+    \item 使用命名空间别名；
+    \item 只引入需要的单个名称。
+\end{itemize}
+\end{warningbox}
+
+\section{内联命名空间}
+
+C++17 支持嵌套命名空间简化语法，但不能在这种简化写法的中间直接加入
+\texttt{inline}。如果需要内联命名空间，C++17 应使用逐层写法：
+
+\begin{lstlisting}
+namespace library {
+    inline namespace v2 {
+
+        void run() {
+        }
+
+    }
+}
+\end{lstlisting}
+
+C++20 才进一步支持嵌套内联命名空间的简化写法：
+
+\begin{lstlisting}
+namespace library::inline v2 {
+
+void run() {
+}
+
+}
+\end{lstlisting}
+
+此时 \texttt{v2} 是内联命名空间。
+
+调用时既可以写：
+
+\begin{lstlisting}
+library::v2::run();
+\end{lstlisting}
+
+也可以直接写：
+
+\begin{lstlisting}
+library::run();
+\end{lstlisting}
+
+内联命名空间常用于库的版本管理。
+
+\begin{warningbox}{语法版本}
+下面的写法需要 C++20：
+
+\begin{lstlisting}
+namespace library::inline v2 {
+}
+\end{lstlisting}
+
+如果项目使用 C++17，请采用前面的逐层写法。
+\end{warningbox}
+
+\section{匿名命名空间}
+
+匿名命名空间没有名称，通常用于限制变量或函数只在当前源文件中可见。
+
+\begin{lstlisting}
+namespace {
+
+int internalValue = 100;
+
+void helper() {
+}
+
+}
+\end{lstlisting}
+
+匿名命名空间和 C++17 嵌套命名空间简化语法不是同一功能。
+
+不能写成：
+
+\begin{lstlisting}
+namespace app:: {
+}
+\end{lstlisting}
+
+如果需要在嵌套命名空间内部使用匿名命名空间，可以写：
+
+\begin{lstlisting}
+namespace app::util {
+
+namespace {
+
+void helper() {
+}
+
+}
+
+}
+\end{lstlisting}
+
+\section{嵌套命名空间中的名称查找}
+
+在内层命名空间中，可以直接访问外层命名空间中的成员。
+
+\begin{lstlisting}
+#include <iostream>
+
+namespace app {
+
+int version = 17;
+
+}
+
+namespace app::module {
+
+void show() {
+    std::cout << version << '\n';
+}
+
+}
+\end{lstlisting}
+
+函数 \texttt{show} 位于 \texttt{app::module} 中，名称查找时会向外层命名空间 \texttt{app} 查找，因此可以访问 \texttt{version}。
+
+也可以写完整限定名：
+
+\begin{lstlisting}
+std::cout << app::version << '\n';
+\end{lstlisting}
+
+\section{同名成员与限定名称}
+
+不同命名空间中可以存在同名函数。
+
+\begin{lstlisting}
+namespace app::client {
+
+void run() {
+}
+
+}
+
+namespace app::server {
+
+void run() {
+}
+
+}
+\end{lstlisting}
+
+调用时必须明确指定所属命名空间：
+
+\begin{lstlisting}
+app::client::run();
+app::server::run();
+\end{lstlisting}
+
+如果同时引入两个命名空间：
+
+\begin{lstlisting}
+using namespace app::client;
+using namespace app::server;
+
+run();  // 错误：调用不明确
+\end{lstlisting}
+
+此时应使用完整限定名消除歧义。
+
+\section{常见错误}
+
+\subsection{未启用 C++17}
+
+嵌套命名空间简化语法属于 C++17。
+
+使用 GCC 或 Clang 编译时，应指定：
+
+\begin{verbatim}
+g++ main.cpp -std=c++17 -o main
+\end{verbatim}
+
+\subsection{把点号写成作用域运算符}
+
+错误：
+
+\begin{lstlisting}
+namespace app.project.util {
+}
+\end{lstlisting}
+
+正确：
+
+\begin{lstlisting}
+namespace app::project::util {
+}
+\end{lstlisting}
+
+命名空间层级使用 \texttt{::}，不是点号。
+
+\subsection{在命名空间名称后写分号}
+
+错误：
+
+\begin{lstlisting}
+namespace app::util; {
+}
+\end{lstlisting}
+
+正确：
+
+\begin{lstlisting}
+namespace app::util {
+}
+\end{lstlisting}
+
+\subsection{命名空间内定义 \texttt{main}}
+
+错误示例：
+
+\begin{lstlisting}
+namespace app {
+
+int main() {
+    return 0;
+}
+
+}
+\end{lstlisting}
+
+标准程序入口 \texttt{main} 必须位于全局命名空间中。
+
+正确写法：
+
+\begin{lstlisting}
+namespace app {
+
+void run() {
+}
+
+}
+
+int main() {
+    app::run();
+    return 0;
+}
+\end{lstlisting}
+
+\subsection{误以为简化语法可以访问不存在的成员}
+
+写出：
+
+\begin{lstlisting}
+namespace A::B::C {
+}
+\end{lstlisting}
+
+会建立或打开相应的命名空间层级，但不会自动创建类、函数或变量。
+
+访问成员前仍需先定义该成员。
+
+\subsection{头文件中滥用 \texttt{using namespace}}
+
+不推荐：
+
+\begin{lstlisting}
+// util.h
+using namespace std;
+\end{lstlisting}
+
+推荐：
+
+\begin{lstlisting}
+namespace app::util {
+
+void print(const std::string& text);
+
+}
+\end{lstlisting}
+
+\section{综合示例：分层项目模块}
+
+下面使用嵌套命名空间模拟一个简单的软件项目。
+
+\begin{lstlisting}
+#include <iostream>
+#include <string>
+using namespace std;
+
+namespace school::system::student {
+
+struct Student {
+    string name;
+    int score;
+};
+
+void show(const Student& stu) {
+    cout << "姓名：" << stu.name << '\n';
+    cout << "成绩：" << stu.score << '\n';
+}
+
+}
+
+namespace school::system::teacher {
+
+void showMessage() {
+    cout << "教师管理模块" << '\n';
+}
+
+}
+
+int main() {
+    school::system::student::Student stu{
+        "Alice", 95
+    };
+
+    school::system::student::show(stu);
+    school::system::teacher::showMessage();
+
+    return 0;
+}
+\end{lstlisting}
+
+这个例子通过不同的命名空间表示不同模块：
+
+\begin{itemize}
+    \item \texttt{school::system::student}：学生模块；
+    \item \texttt{school::system::teacher}：教师模块。
+\end{itemize}
+
+
+\section{知识总结}
+
+\begin{conceptbox}{本节核心内容}
+\begin{enumerate}[label=\arabic*.]
+    \item C++17 可以使用 \texttt{namespace A::B::C} 简化嵌套命名空间；
+    \item 简化语法与逐层嵌套写法在语义上等价；
+    \item 命名空间中的成员通过 \texttt{::} 访问；
+    \item 深层命名空间可以使用别名缩短名称；
+    \item 同一个命名空间可以在多个位置重复打开；
+    \item 头文件中应谨慎使用 \texttt{using namespace}；
+    \item \texttt{main} 函数必须位于全局命名空间。
+\end{enumerate}
+\end{conceptbox}
+
+\section{板书式速记}
+
+\begin{lstlisting}
+// C++17 嵌套命名空间
+namespace A::B::C {
+    void func() {
+    }
+}
+
+// 调用成员
+A::B::C::func();
+
+// 命名空间别名
+namespace ABC = A::B::C;
+ABC::func();
+
+// 引入单个名称
+using A::B::C::func;
+func();
+
+// C++20 内联嵌套命名空间
+namespace library::inline v2 {
+    void run() {
+    }
+}
+\end{lstlisting}
+
+\end{document}
