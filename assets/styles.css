@@ -2611,6 +2611,108 @@ code {
   }
 }
 
+/* Quiet, image-led home masthead */
+.home-page .site-header {
+  background: linear-gradient(180deg, rgba(7, 20, 43, 0.58), rgba(7, 20, 43, 0));
+  border: 0;
+  box-shadow: none;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.home-page .site-header .brand,
+.home-page .site-header .brand strong {
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.home-page .site-header .brand > span > span {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.home-page .site-header .brand img {
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 7px;
+  padding: 3px;
+}
+
+.home-page .site-header .nav-links a {
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 500;
+  text-shadow: 0 2px 12px rgba(4, 13, 31, 0.34);
+}
+
+.home-page .site-header .nav-links a:hover {
+  color: #fff;
+  text-decoration: none;
+}
+
+.home-page .home-hero {
+  min-height: 100vh;
+  padding-top: 122px;
+}
+
+.hero-entry {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  margin-top: 29px;
+}
+
+.hero-entry a {
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.52);
+  color: rgba(255, 255, 255, 0.94);
+  display: inline-flex;
+  font-size: 0.94rem;
+  font-weight: 600;
+  gap: 15px;
+  letter-spacing: 0.06em;
+  padding: 5px 1px 7px;
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.hero-entry a:hover {
+  border-color: #fff;
+  color: #fff;
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.hero-entry p {
+  color: rgba(255, 255, 255, 0.54);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  margin: 24px 0 0;
+}
+
+@media (max-width: 700px) {
+  .home-page .site-header {
+    background: linear-gradient(180deg, rgba(7, 20, 43, 0.74), rgba(7, 20, 43, 0));
+  }
+
+  .home-page .site-header .brand {
+    margin-left: 54px;
+  }
+
+  .home-page .site-header .brand > span,
+  .home-page .site-header .nav-links {
+    display: none;
+  }
+
+  .home-page .home-hero {
+    padding-top: 112px;
+  }
+
+  .hero-entry p {
+    font-size: 0.66rem;
+    line-height: 1.75;
+    max-width: 280px;
+  }
+}
+
 /* Answers and explanations stay directly inside each question. */
 .knowledge-card,
 .qa-card [data-knowledge-card] {
@@ -3086,5 +3188,44 @@ code {
 
   .course-card {
     min-height: 405px;
+  }
+}
+
+/* Final home masthead override: keep navigation visually inside the hero. */
+.home-page .site-header {
+  background: linear-gradient(180deg, rgba(7, 20, 43, 0.58), rgba(7, 20, 43, 0));
+  border: 0;
+  box-shadow: none;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.home-page .site-header .brand,
+.home-page .site-header .brand strong {
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.home-page .site-header .brand > span > span {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.home-page .site-header .nav-links a {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.home-page .home-hero {
+  min-height: 100vh;
+  padding-top: 122px;
+}
+
+@media (max-width: 700px) {
+  .home-page .site-header {
+    background: linear-gradient(180deg, rgba(7, 20, 43, 0.74), rgba(7, 20, 43, 0));
+  }
+
+  .home-page .home-hero {
+    padding-top: 112px;
   }
 }

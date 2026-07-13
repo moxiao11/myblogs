@@ -1,0 +1,202 @@
+% ---
+% title: C++ static_assert 编译期断言
+% date: 2026-07-13
+% author: Crystal-Sky
+% tags: C++, C++17, 基础语法, static_assert, 编译期检查
+% summary: 对比 assert 与 static_assert，介绍编译期断言的语法、简化写法、类型检查和常见错误。
+% slug: cpp-static-assert
+% course: C++
+% course_slug: cpp
+% chapter: 基础语法
+% chapter_order: 1
+% lesson_order: 6
+% lesson_type: 基础语法
+% ---
+
+\documentclass[UTF8,12pt,a4paper]{ctexart}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+\geometry{left=2.4cm,right=2.4cm,top=2.5cm,bottom=2.5cm}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{C++ static\_assert}
+\fancyhead[R]{教学讲义}
+\fancyfoot[C]{\thepage}
+\definecolor{codebg}{RGB}{247,248,250}
+\definecolor{keywordcolor}{RGB}{0,92,197}
+\definecolor{commentcolor}{RGB}{0,128,0}
+\definecolor{stringcolor}{RGB}{163,21,21}
+\lstset{language=C++,basicstyle=\ttfamily\small,keywordstyle=\color{keywordcolor}\bfseries,commentstyle=\color{commentcolor},stringstyle=\color{stringcolor},backgroundcolor=\color{codebg},frame=single,numbers=left,numberstyle=\tiny\color{gray},numbersep=8pt,tabsize=4,showstringspaces=false,breaklines=true,columns=fullflexible,keepspaces=true}
+\newtcolorbox{conceptbox}[1]{colback=blue!3,colframe=blue!60!black,title=#1,fonttitle=\bfseries}
+\title{\textbf{C++ \texttt{static\_assert} 编译期断言}}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+
+\section{先回顾普通 \texttt{assert}}
+普通 \texttt{assert} 用于在程序运行时检查条件。
+\begin{lstlisting}
+#include <cassert>
+
+int main() {
+    int x = 10;
+    assert(x > 0);
+}
+\end{lstlisting}
+条件为假时，程序会在运行时终止。因此，\texttt{assert} 属于运行期检查。
+
+\section{什么是 \texttt{static\_assert}}
+\texttt{static\_assert} 用于在编译阶段检查条件。
+\begin{lstlisting}
+static_assert(条件, "错误信息");
+\end{lstlisting}
+例如：
+\begin{lstlisting}
+static_assert(sizeof(int) >= 4,
+              "int 类型至少需要 4 字节");
+\end{lstlisting}
+条件为假时，程序无法通过编译。
+
+\begin{conceptbox}{核心区别}
+\begin{itemize}
+    \item \texttt{assert}：运行时检查；
+    \item \texttt{static\_assert}：编译时检查。
+\end{itemize}
+\end{conceptbox}
+
+\section{条件必须能在编译期确定}
+正确：
+\begin{lstlisting}
+constexpr int size = 10;
+static_assert(size > 0, "size 必须大于 0");
+\end{lstlisting}
+错误：
+\begin{lstlisting}
+int size;
+std::cin >> size;
+static_assert(size > 0, "size 必须大于 0");
+\end{lstlisting}
+第二段中的 \texttt{size} 只有运行后才能确定，因此不能用于 \texttt{static\_assert}。
+
+\section{C++17 的简化写法}
+在较早标准中通常需要写错误信息：
+\begin{lstlisting}
+static_assert(sizeof(int) >= 4, "int 太小");
+\end{lstlisting}
+从 C++17 开始，可以省略第二个参数：
+\begin{lstlisting}
+static_assert(sizeof(int) >= 4);
+\end{lstlisting}
+不过实际开发中，保留错误信息更方便定位问题。
+
+\section{常见用途}
+\subsection{检查类型大小}
+\begin{lstlisting}
+static_assert(sizeof(long long) >= 8,
+              "long long 至少需要 8 字节");
+\end{lstlisting}
+
+\subsection{检查模板参数}
+\begin{lstlisting}
+template <typename T>
+T add(T a, T b) {
+    static_assert(sizeof(T) >= 4,
+                  "类型长度不能小于 4 字节");
+    return a + b;
+}
+\end{lstlisting}
+
+\subsection{结合类型特征}
+\begin{lstlisting}
+#include <type_traits>
+
+template <typename T>
+T twice(T value) {
+    static_assert(std::is_integral_v<T>,
+                  "T 必须是整数类型");
+    return value * 2;
+}
+\end{lstlisting}
+调用：
+\begin{lstlisting}
+twice(10);     // 正确
+twice(3.14);   // 编译错误
+\end{lstlisting}
+
+\subsection{检查数组长度}
+\begin{lstlisting}
+template <typename T, std::size_t N>
+void process(T (&arr)[N]) {
+    static_assert(N >= 5,
+                  "数组长度至少为 5");
+}
+\end{lstlisting}
+
+\subsection{检查配置常量}
+\begin{lstlisting}
+constexpr int BufferSize = 1024;
+
+static_assert(BufferSize > 0,
+              "缓冲区大小必须大于 0");
+
+static_assert((BufferSize & (BufferSize - 1)) == 0,
+              "缓冲区大小必须是 2 的幂");
+\end{lstlisting}
+
+
+\section{与 \texttt{assert} 对比}
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+项目 & \texttt{assert} & \texttt{static\_assert} \\
+\midrule
+检查时间 & 运行时 & 编译时 \\
+条件要求 & 普通布尔表达式 & 常量表达式 \\
+失败结果 & 程序终止 & 编译失败 \\
+是否需要头文件 & \texttt{<cassert>} & 不需要 \\
+典型用途 & 检查运行数据 & 检查类型和配置 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{常见错误}
+\subsection{使用运行时变量}
+\begin{lstlisting}
+int x = 10;
+static_assert(x > 0, "x 必须大于 0"); // 错误
+\end{lstlisting}
+如果要检查运行时数据，应使用普通判断或 \texttt{assert}。
+
+\subsection{条件和错误信息矛盾}
+错误：
+\begin{lstlisting}
+static_assert(sizeof(int) < 4,
+              "int 至少应有 4 字节");
+\end{lstlisting}
+正确：
+\begin{lstlisting}
+static_assert(sizeof(int) >= 4,
+              "int 至少应有 4 字节");
+\end{lstlisting}
+
+
+
+\section{总结}
+\begin{conceptbox}{板书式记忆}
+\begin{lstlisting}
+static_assert(编译期条件, "错误信息");
+\end{lstlisting}
+\begin{enumerate}[label=\arabic*.]
+    \item 条件必须在编译期确定；
+    \item 条件为假时，程序无法通过编译；
+    \item 常用于检查类型、模板参数和编译期配置。
+\end{enumerate}
+\end{conceptbox}
+
+\end{document}

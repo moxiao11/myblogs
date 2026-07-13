@@ -221,6 +221,37 @@ function preprocessLatex(body) {
   return text;
 }
 
+function replaceBalancedCommand(raw, command, render) {
+  let value = String(raw);
+  const prefix = `\\${command}{`;
+  let cursor = 0;
+  let start;
+
+  while ((start = value.indexOf(prefix, cursor)) !== -1) {
+    let position = start + prefix.length;
+    let depth = 1;
+
+    while (position < value.length && depth > 0) {
+      if (value[position] === "\\" && position + 1 < value.length) {
+        position += 2;
+        continue;
+      }
+      if (value[position] === "{") depth += 1;
+      else if (value[position] === "}") depth -= 1;
+      position += 1;
+    }
+
+    if (depth !== 0) break;
+
+    const inner = value.slice(start + prefix.length, position - 1);
+    const replacement = render(inner);
+    value = value.slice(0, start) + replacement + value.slice(position);
+    cursor = start + replacement.length;
+  }
+
+  return value;
+}
+
 function inlineFormat(raw) {
   const htmlTokens = [];
   const hold = (html) => {
@@ -233,7 +264,11 @@ function inlineFormat(raw) {
     .replace(/\\textbackslash\{\}/g, "\\")
     .replace(/\\([#$%&_{}])/g, "$1");
 
-  let value = raw
+  let value = replaceBalancedCommand(raw, "texttt", (text) => (
+    hold(`<code>${escapeHtml(codeText(text))}</code>`)
+  ));
+
+  value = value
     .replace(/\\href\{([^}]+)\}\{([^}]+)\}/g, (_, url, label) => {
       return hold(`<a href="${escapeAttr(url)}">${inlineFormat(label)}</a>`);
     })
@@ -247,7 +282,6 @@ function inlineFormat(raw) {
       const safeColor = /^[a-zA-Z]+$/.test(color) ? color : "";
       return safeColor ? hold(`<span style="color:${safeColor}">${inlineFormat(text)}</span>`) : hold(inlineFormat(text));
     })
-    .replace(/\\texttt\{([^}]+)\}/g, (_, text) => hold(`<code>${escapeHtml(codeText(text))}</code>`))
     .replace(/\\textsf\{([^}]+)\}/g, (_, text) => hold(inlineFormat(text)))
     .replace(/\\small\{([^}]*)\}/g, (_, text) => hold(`<small>${inlineFormat(text)}</small>`))
     .replace(/\\textbf\{([^}]+)\}/g, (_, text) => hold(`<strong>${inlineFormat(text)}</strong>`))
@@ -553,7 +587,7 @@ function renderLines(text, state = { sectionNumber: 0, questionNumber: 0, usedHe
         output.push(`<div class="center-block">${renderLines(collected.text, state)}</div>`);
       } else if (env === "knowledge") {
         output.push(`<aside class="knowledge-block"><strong>知识点：</strong>${renderLines(collected.text, state)}</aside>`);
-      } else if (["conceptbox", "warningbox", "examplebox"].includes(env)) {
+      } else if (["conceptbox", "warningbox", "examplebox", "boxx"].includes(env)) {
         const boxTitle = title ? `<strong>${inlineFormat(title)}</strong>` : "";
         output.push(`<aside class="article-callout ${env}">${boxTitle}${renderLines(collected.text, state)}</aside>`);
       } else if (env === "question") {
@@ -902,15 +936,9 @@ function renderIndex(posts) {
       <p class="hero-kicker"><span></span> COURSE NOTES · LEARNING JOURNEY</p>
       <h1>Crystal Sky</h1>
       <p class="hero-motto">愿你历经山河，仍觉人间值得</p>
-      <p class="hero-description">把课程讲义、题库、真题解析与复习路径，整理成可以循序学习的温柔知识地图。</p>
-      <div class="hero-actions">
-        <a class="primary-action" href="#courses">开始学习 <span>→</span></a>
-        <a class="secondary-action" href="#latest">查看最近更新</a>
-      </div>
-      <div class="hero-stats" aria-label="站点内容统计">
-        <div><strong>${courses.length}</strong><span>课程专题</span></div>
-        <div><strong>${posts.length}</strong><span>学习单元</span></div>
-        <div><strong>${totalMinutes}</strong><span>分钟内容</span></div>
+      <div class="hero-entry">
+        <a href="#courses">进入课程目录 <span aria-hidden="true">↘</span></a>
+        <p aria-label="站点内容统计">${courses.length} 个专题&nbsp;&nbsp;·&nbsp;&nbsp;${posts.length} 篇笔记&nbsp;&nbsp;·&nbsp;&nbsp;约 ${totalMinutes} 分钟阅读</p>
       </div>
     </div>
     <div class="hero-board" aria-label="学习路径预览">

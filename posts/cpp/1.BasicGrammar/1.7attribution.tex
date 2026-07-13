@@ -1,0 +1,295 @@
+% ---
+% title: C++17 属性标记：fallthrough、nodiscard 与 maybe_unused
+% date: 2026-07-13
+% author: Crystal-Sky
+% tags: C++, C++17, 基础语法, 属性, fallthrough, nodiscard, maybe_unused
+% summary: 介绍 C++17 三个常用属性标记的作用、正确位置、典型场景、对比和常见错误。
+% slug: cpp17-attributes
+% course: C++
+% course_slug: cpp
+% chapter: 基础语法
+% chapter_order: 1
+% lesson_order: 7
+% lesson_type: 基础语法
+% ---
+
+\documentclass[UTF8,12pt,a4paper]{ctexart}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{tcolorbox}
+\geometry{left=2.5cm,right=2.5cm}
+
+\lstset{
+language=C++,
+basicstyle=\ttfamily\small,
+frame=single,
+breaklines=true
+}
+
+\newtcolorbox{boxx}[1]{title=#1,colback=blue!3}
+
+\title{C++17 属性标记\\
+\texttt{[[fallthrough]]}、\texttt{[[nodiscard]]}、\texttt{[[maybe\_unused]]}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{属性标记简介}
+
+C++ 属性使用：
+
+\begin{lstlisting}
+[[attribute]]
+\end{lstlisting}
+
+向编译器提供额外信息。它通常不会改变程序逻辑，而是帮助编译器进行检查和优化。
+
+C++17 常用属性：
+
+\begin{itemize}
+\item \texttt{[[fallthrough]]}
+\item \texttt{[[nodiscard]]}
+\item \texttt{[[maybe\_unused]]}
+\end{itemize}
+
+\section{\texttt{[[fallthrough]]}}
+
+\subsection{作用}
+
+用于 \texttt{switch} 中，表示当前 case 故意继续执行下一个 case。
+
+普通情况：
+
+\begin{lstlisting}
+switch(x)
+{
+case 1:
+    cout<<"one";
+
+case 2:
+    cout<<"two";
+}
+\end{lstlisting}
+
+如果 x 为 1，会继续执行 case 2。
+
+为了避免编译器认为忘记写 break：
+
+\begin{lstlisting}
+switch(x)
+{
+case 1:
+    cout<<"one";
+    [[fallthrough]];
+
+case 2:
+    cout<<"two";
+    break;
+}
+\end{lstlisting}
+
+\begin{boxx}{注意}
+\texttt{[[fallthrough]]} 只是告诉编译器这里的穿透是有意的，不会改变执行流程。
+\end{boxx}
+
+\section{\texttt{[[nodiscard]]}}
+
+\subsection{作用}
+
+表示函数返回值或者对象结果不应该被忽略。
+
+例如：
+
+\begin{lstlisting}
+[[nodiscard]]
+int getValue()
+{
+    return 100;
+}
+
+int main()
+{
+    getValue(); // 编译器警告
+}
+\end{lstlisting}
+
+常用于：
+
+\begin{itemize}
+\item 错误码；
+\item 状态检查；
+\item 资源创建函数。
+\end{itemize}
+
+例如：
+
+\begin{lstlisting}
+[[nodiscard]]
+bool openFile();
+\end{lstlisting}
+
+调用者应该检查：
+
+\begin{lstlisting}
+if(openFile())
+{
+    // success
+}
+\end{lstlisting}
+
+\subsection{修饰类型}
+
+也可以修饰类型：
+
+\begin{lstlisting}
+struct [[nodiscard]] Error
+{
+    int code;
+};
+\end{lstlisting}
+
+如果：
+
+\begin{lstlisting}
+Error getError();
+
+getError();
+\end{lstlisting}
+
+同样会产生提醒。
+
+\section{\texttt{[[maybe\_unused]]}}
+
+\subsection{作用}
+
+告诉编译器：
+
+\begin{center}
+这个变量、参数或者函数可能不会被使用。
+\end{center}
+
+例如：
+
+\begin{lstlisting}
+void debug([[maybe_unused]] int value)
+{
+
+}
+\end{lstlisting}
+
+不会产生 unused parameter 警告。
+
+也可以用于变量：
+
+\begin{lstlisting}
+int main()
+{
+    [[maybe_unused]]
+    int version = 17;
+}
+\end{lstlisting}
+
+\section{三个属性对比}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+属性 & 用途 & 作用\\
+\midrule
+\texttt{fallthrough}
+& switch
+& 允许 case 穿透\\
+\texttt{nodiscard}
+& 返回值/类型
+& 提醒不要忽略结果\\
+\texttt{maybe\_unused}
+& 变量/参数
+& 允许未使用\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{综合示例}
+
+\begin{lstlisting}
+#include <iostream>
+using namespace std;
+
+[[nodiscard]]
+bool connect()
+{
+    return true;
+}
+
+void test([[maybe_unused]] int mode)
+{
+}
+
+int main()
+{
+    int x = 1;
+
+    switch(x)
+    {
+    case 1:
+        cout<<"start";
+        [[fallthrough]];
+
+    case 2:
+        cout<<"run";
+        break;
+    }
+
+    connect(); // 提醒返回值未使用
+
+    return 0;
+}
+\end{lstlisting}
+
+\section{常见错误}
+
+\subsection{误解 nodiscard}
+
+\texttt{nodiscard} 不会阻止程序运行，只产生编译器提醒。
+
+\subsection{fallthrough 放置错误}
+
+错误：
+
+\begin{lstlisting}
+case 1:
+    [[fallthrough]];
+    cout<<"hello";
+\end{lstlisting}
+
+正确：
+
+\begin{lstlisting}
+case 1:
+    cout<<"hello";
+    [[fallthrough]];
+
+case 2:
+\end{lstlisting}
+
+\section{总结}
+
+\begin{boxx}{快速记忆}
+
+\begin{lstlisting}
+[[fallthrough]]
+// 我知道这里没有break
+
+[[nodiscard]]
+// 返回值不要丢
+
+[[maybe_unused]]
+// 这个变量可能不用
+\end{lstlisting}
+
+\end{boxx}
+
+\end{document}
