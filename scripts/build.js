@@ -54,6 +54,15 @@ const courseCatalog = [
     goals: ["掌握复杂度分析", "理解经典数据结构", "训练算法解题思路"]
   },
   {
+    slug: "operating-systems",
+    title: "操作系统",
+    eyebrow: "计算机核心",
+    icon: "⊞",
+    accent: "blue",
+    description: "整理三份期末真题的完整题目与逐题解析，覆盖进程调度、虚拟存储、文件系统与同步算法等核心考点。",
+    goals: ["刷透期末真题题型", "掌握调度与存储管理计算", "理清同步与文件系统思路"]
+  },
+  {
     slug: "learning-toolkit",
     title: "学习与写作工具",
     eyebrow: "方法与工具",
@@ -200,6 +209,18 @@ function preprocessLatex(body) {
     .replace(/\\medskip/g, "")
     .replace(/\\smallskip/g, "")
     .replace(/\\bigskip/g, "")
+    .replace(/\\addlinespace/g, "")
+    .replace(/\\\\\[[^\]]*\]/g, "\\\\")
+    .replace(/\\begin\{tabularx\}\{[^}]*\}/g, "\\begin{tabular}")
+    .replace(/\\end\{tabularx\}/g, "\\end{tabular}")
+    .replace(/(\\begin\{tabular\}(?:\[[^\]]*\])?\{)([^}]*)\}/g, (m, head, spec) => {
+      const cols = spec
+        .replace(/>\{[^}]*\}/g, "")
+        .replace(/[pmb]\{[^}]*\}/g, "c")
+        .replace(/X/g, "c");
+      const count = (cols.match(/[lcr]/g) || []).length || 1;
+      return `${head}${"c".repeat(count)}}`;
+    })
     .replace(/\\newpage/g, "")
     .replace(/\\clearpage/g, "");
 
@@ -1124,7 +1145,7 @@ function copyAssets() {
   }
 }
 
-function loadPosts() {
+function loadPosts({ includeDrafts = false } = {}) {
   ensureDir(postsDir);
   const findTexFiles = (dir) => fs.readdirSync(dir, { withFileTypes: true })
     .flatMap((entry) => {
@@ -1139,7 +1160,7 @@ function loadPosts() {
       const relativeSource = path.relative(postsDir, filePath);
       const isNested = path.dirname(relativeSource) !== ".";
       const hasMeta = /^(?:\uFEFF)?%\s*---\s*(?:\r?\n)/.test(source.slice(0, 100));
-      if (isNested && !hasMeta) {
+      if (isNested && !hasMeta && !includeDrafts) {
         console.warn(`Skipped draft without metadata: ${relativeSource}`);
         return null;
       }
@@ -1202,4 +1223,14 @@ function build() {
   console.log(`Built ${posts.length} post(s) into ${path.relative(root, distDir)}`);
 }
 
-build();
+if (require.main === module) {
+  build();
+}
+
+module.exports = {
+  build,
+  collectCourses,
+  loadPosts,
+  postUrl,
+  renderPost
+};

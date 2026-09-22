@@ -1,0 +1,395 @@
+% ---
+% title: 操作系统期末真题（三）解析
+% date: 2026-09-22
+% author: Crystal-Sky
+% tags: 操作系统, 期末复习, 真题解析
+% summary: 操作系统期末真题（三）题目与逐题解析：工作集策略、死锁定量分析、文件打开机制、页式地址转换与 LRU 置换、共享栈竞态分析、文件系统设计与同步算法。
+% slug: os-final-exam-3
+% course: 操作系统
+% course_slug: operating-systems
+% chapter: 期末真题
+% lesson_order: 3
+% lesson_type: 真题解析
+% challenge: false
+% inline_answers: true
+% ---
+\documentclass[UTF8,12pt]{ctexart}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{array,booktabs,tabularx,longtable}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.35em}
+\linespread{1.25}
+\setlist{nosep,leftmargin=2em}
+
+\newenvironment{question}{\par\medskip\noindent\textbf{【题目】}\par\smallskip}{\par\medskip}
+\newenvironment{explanation}{\par\noindent\textbf{【解析】}\par\smallskip}{\par\medskip}
+\newenvironment{answer}{\par\noindent\textbf{【答案】}\par\smallskip}{\par}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  frame=single,
+  breaklines=true
+}
+
+\begin{document}
+\begin{center}
+满分：100 分　　考试时间：\underline{\hspace{2cm}} 分钟
+
+姓名：\underline{\hspace{2.2cm}} 学号：\underline{\hspace{2.2cm}} 班级：\underline{\hspace{2.2cm}} 成绩：\underline{\hspace{2.2cm}}
+\end{center}
+
+\noindent 注意事项：请在答题纸或指定区域作答；计算题需写出必要计算过程；同步算法题需说明信号量及共享变量含义。
+
+\section*{一、简要回答下列问题（24 分）}
+
+\subsection*{（6 分）操作系统在虚拟存储管理中引入工作集策略有何作用？工作集策略不适用于什么应用场景？可以举例说明。}
+\begin{answer}
+作用是根据近期访问集合调节驻留集、减少缺页和抖动；对局部性弱、一次性大规模顺序扫描或强实时等场景不合适。
+\end{answer}
+
+\begin{explanation}
+工作集是一个进程在最近一段时间内实际使用的页面集合。操作系统根据工作集大小动态决定进程需要保留的驻留页，可减少把近期频繁使用的页面换出的概率，从而降低缺页率和抖动，并帮助系统判断当前内存能否同时支持更多进程。
+
+工作集策略依赖“程序具有局部性”这一假设，而且需要持续记录页面近期访问情况，因此不适合局部性很弱或访问模式近似一次性顺序扫描的应用，也不适合对时间可预测性要求极高、不能接受额外统计开销的场景。例如顺序扫描一个远大于物理内存且每页只访问一次的大文件时，工作集会不断向前移动，被保留的旧页面几乎不会再次使用。
+\end{explanation}
+\subsection*{（6 分）假定系统中有 N 个进程，竞争使用资源 R（R 属于临界资源）。已知资源 R 的个数为 8，每个进程最多需要资源 R 的个数为 3。当 N 取哪些值时，系统一定不会发生死锁？请解释理由。}
+\begin{answer}
+$N=1,2,3$ 时一定不会发生死锁。
+\end{answer}
+
+\begin{explanation}
+每个进程最多需要 3 个 R。发生最不利情况时，可以让每个进程都已经占有 2 个 R，并继续等待第 3 个。如果在这种情况下系统仍至少剩 1 个空闲 R，就一定能让某一个进程获得第 3 个资源并完成，然后释放资源，使其他进程继续完成。
+
+因此保证绝对不会死锁的条件为
+\[
+8\ge N(3-1)+1=2N+1.
+\]
+于是
+\[
+2N\le7,\qquad N\le3.
+\]
+当 $N=4$ 时，可以出现 4 个进程各占 2 个资源，共占满 8 个，每个都等待第 3 个，从而发生死锁。
+\end{explanation}
+\subsection*{（6 分）在多数操作系统环境下，应用程序在访问文件前需要首先打开（open）文件，为什么？请给出一种不需要应用程序在访问文件前首先打开文件的方案，并说明与“先打开再访问”的方案相比所具备的优点和存在的不足。}
+\begin{answer}
+open 的主要目的，是一次完成路径解析与权限检查并建立内核打开文件状态；也可设计成每次 I/O 都使用路径名的无 open 接口，但会增加重复查找开销。
+\end{answer}
+
+\begin{explanation}
+open 时，操作系统可以完成路径名解析、访问权限检查，把文件的控制信息调入内存，建立系统打开文件表和进程打开文件表，并返回文件描述符。后续 read/write 只需通过描述符定位内存中的打开文件对象，不必每次重新解析路径，还可以保存当前文件偏移、打开方式、锁等状态。
+
+一种不显式 open 的方案是让每次 read/write 都直接携带完整文件路径，由内核在每次访问时进行路径查找、权限检查并完成操作。例如可设计成类似
+\texttt{read(path, offset, buf, n)} 的无状态接口。
+
+优点是应用接口简单，不需要维护文件描述符和显式 close；每次操作都以路径为依据，状态更少。缺点是每次访问都重复进行路径解析和权限检查，开销较大；难以高效维护连续访问的当前偏移、文件锁和打开模式等状态。
+\end{explanation}
+\subsection*{（6 分）在设计操作系统的 I/O 管理（包括磁盘 I/O）功能时，需要考虑多个设计目标，例如设备利用率高、I/O 设备之间的并行程度高等，而有些设计目标之间往往存在冲突，需要权衡。请举两个与 I/O 管理相关的设计目标存在冲突的例子，分别解释可能冲突的情况，并简要阐述在设计时采取什么策略对相互冲突的设计目标进行权衡。}
+\begin{answer}
+合理答案不唯一，只要给出两个 I/O 设计目标的真实冲突、原因以及相应折中策略即可。
+\end{answer}
+
+\begin{explanation}
+例 1：磁盘吞吐量与请求响应公平性冲突。电梯类磁盘调度可按磁头位置重排请求，减少寻道、提高吞吐量，但某些远离当前磁头方向的请求可能等待较久。可通过 SCAN/C-SCAN、等待时间上限或老化机制，在吞吐量与公平性之间折中。
+
+例 2：I/O 并行度与缓冲区/内存占用冲突。为多个设备和多个请求配置更多缓冲区、异步队列，可以让 CPU 与多个设备并行工作，提高设备利用率，但会占用更多内存并增加管理复杂度。可根据设备速度、负载和内存压力动态调整缓冲区数量和队列深度。
+\end{explanation}
+\section*{二、虚拟页式存储管理与地址转换（18 分）}
+\begin{question}
+已知某计算机系统采用虚拟页式存储管理，页的大小为 4KB。系统采用固定分配、请求调页和局部置换策略，页的置换采用 LRU（最近最久未使用）算法，为进程 P 分配的内存物理块（页框，page frame）数为 3。假定在时刻 t，进程 P 只有页号为 2、5、9 的页在内存中，对应的物理块号分别为 368H、120H、6AH。此时，进程 P 被调度执行，依次访问下列虚拟地址（假定这些虚拟地址均在进程 P 的虚拟地址空间内）：
+
+（1）5296H　（2）2A68H　（3）610EH　（4）93A6H　（5）602H
+
+要求：给出上述虚拟地址分别对应的物理地址，用十六进制表示，并说明计算过程；给出进程 P 依次访问上述 5 个虚拟地址后页表的内容；说明如何提高虚拟地址转换为物理地址的速度，给出 2 种方法并解释具体理由。
+\end{question}
+
+\begin{answer}
+物理地址依次为 120296H、368A68H、6A10EH、1203A6H、368602H；最终驻留页为 0$\to$368H、6$\to$6AH、9$\to$120H。可用 TLB 及提高 TLB 覆盖/减少页表遍历的方法加速地址转换。
+\end{answer}
+
+\begin{explanation}
+页大小为 4KB=$2^{12}$B，所以虚拟地址的低 12 位（即最后 3 个十六进制数）为页内偏移，其余高位为页号。
+
+初始驻留页：页 2 $\to$ 368H，页 5 $\to$ 120H，页 9 $\to$ 6AH。
+
+（1）5296H：页号 5，偏移 296H，页 5 在 120H 中，因此物理地址为
+\[
+\boxed{120296H}.
+\]
+
+（2）2A68H：页号 2，偏移 A68H，物理地址为
+\[
+\boxed{368A68H}.
+\]
+
+（3）610EH：页号 6，偏移 10EH。页 6 不在内存，发生缺页。此前页 5、2 已被访问，页 9 最久未使用，因此置换页 9，页 6 调入原来页 9 的物理块 6AH。物理地址为
+\[
+\boxed{6A10EH}.
+\]
+
+此时驻留页为 5、2、6，最近使用顺序为 5（最久）、2、6（最近）。
+
+（4）93A6H：页号 9，偏移 3A6H。页 9 已被换出，再次缺页。按 LRU 淘汰页 5，把页 9 调入页 5 原来的物理块 120H，物理地址为
+\[
+\boxed{1203A6H}.
+\]
+
+（5）602H 即 0602H：页号 0，偏移 602H。页 0 缺页。当前页 2、6、9 中，页 2 最久未使用，因此淘汰页 2，把页 0 调入 368H，得到
+\[
+\boxed{368602H}.
+\]
+
+最终页表中驻留的三个页面为：
+\begin{center}
+\begin{tabular}{ccc}
+\toprule
+页号 & 物理块号 & 状态\\
+\midrule
+0 & 368H & 在内存\\
+2 & -- & 不在内存\\
+5 & -- & 不在内存\\
+6 & 6AH & 在内存\\
+9 & 120H & 在内存\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+提高地址转换速度的方法可以包括：
+
+（1）设置快表 TLB，把近期常用的页号到物理块号映射放在高速相联存储器中。TLB 命中时无需再访问内存页表即可得到物理块号。
+
+（2）提高 TLB 的有效覆盖范围，例如增大 TLB 容量或采用较大的页面。这样可以降低 TLB 未命中频率；若使用多级页表，还可增加页表项缓存（page-walk cache）以减少 TLB 未命中后的页表访问次数。
+\end{explanation}
+\section*{三、并发线程访问共享栈的正确性分析（12 分）}
+\begin{question}
+设程序 P 包含下列代码片段。其中，stack 和 top 是全局变量，stack 存放栈元素，top 表示栈顶，栈元素为 int 类型，push 和 pop 分别为进栈和出栈函数。程序 P 对栈 stack 的所有操作均通过调用 push 和 pop 函数实现，且传递的参数以及对返回值的处理方法是正确的。
+
+\begin{lstlisting}
+#define MAXSIZE 256
+int stack[MAXSIZE];
+int top = -1;
+int push(int x) // 若栈满，则返回 -1；否则，将 x 进栈，返回 0
+{
+ if (top >= MAXSIZE - 1) return -1;
+ top++;
+ stack[top] = x;
+ return 0;
+}
+
+int pop(int *x) // 若栈空，则返回 -1；否则，栈顶元素出栈并存入 x 所指的地址，返回 0
+{
+ if (top < 0) return -1;
+ *x = stack[top];
+ top--;
+ return 0;
+}
+\end{lstlisting}
+
+假定程序 P 执行时启动 2 个线程，这 2 个线程都对栈 stack 进行多次操作。在什么情况下会导致程序 P 对栈 stack 的 push 或 pop 操作结果不正确？请给出 3 种具体情况，并结合程序代码分别加以说明。
+\end{question}
+
+\begin{answer}
+典型错误包括 push-push 竞争、pop-pop 竞争以及 push-pop 交叉竞争；原因都是对共享 top 和 stack 的复合操作缺少互斥。
+\end{answer}
+
+\begin{explanation}
+根本原因是 push 和 pop 都不是原子操作，两个线程可以在这些语句之间交叉执行，而 top 和 stack 又是共享变量。
+
+情况 1：两个线程同时 push。假设 top=-1。线程 T1 和 T2 都先通过“栈未满”判断；T1 执行 top++ 后 top=0，在它执行 stack[top]=x 之前发生切换，T2 又执行 top++ 使 top=1。此时 T1 恢复执行时会使用已经变成 1 的 top，把自己的数据写入 stack[1]，T2 也可能写 stack[1]，导致元素丢失或栈内容与 top 不一致。
+
+情况 2：两个线程同时 pop。假设栈非空，两个线程都通过 top<0 的检查，并可能都在 top 尚未减小之前读取同一个 stack[top]，从而把同一个栈顶元素弹出两次；随后对 top-- 的交叉执行还可能使 top 的最终值错误。
+
+情况 3：一个线程 push、另一个线程 pop。假设 push 线程已经执行 top++，但还未来得及执行 stack[top]=x，此时 pop 线程看到新的 top，认为栈顶已有新元素，并读取 stack[top]，结果可能读到尚未写入的新位置中的旧值或无效值，然后又执行 top--，破坏栈状态。
+
+因此必须把一次完整的 push 或 pop 作为临界区互斥执行。
+\end{explanation}
+\section*{四、磁盘文件系统设计与计算（16 分）}
+某磁盘文件系统采用多级目录结构，目录当作文件，每个文件有唯一的 ID，磁盘逻辑块与物理块的大小均为 4096 个字节（磁盘物理块以下简称磁盘块）。目录文件存放符号目录项，每个符号目录项占 32 个字节，包括文件 ID 和文件名。基本目录项包括文件类型标志（目录文件或普通文件）和文件地址 addr 等。对于目录文件，addr 所指的 1 个磁盘块存放文件内容；对于普通文件，addr 所指的 1 个磁盘块按顺序存放文件内容所占用的若干磁盘块地址（每个地址占 8 个字节）。已知文件 ID 与其基本目录项所在磁盘块地址的对应关系以及根目录的 ID。
+
+\subsection*{（1）每个普通文件的最大长度是多少个字节？每个目录下最多可包含多少个文件（包括子目录）？要求给出计算过程。}
+\begin{answer}
+普通文件最大 2,097,152 字节（2MB）；每个目录最多 128 个文件（包括子目录）。
+\end{answer}
+
+\begin{explanation}
+普通文件的 addr 指向 1 个索引块。一个索引块大小为 4096B，每个数据块地址占 8B，所以最多存放
+\[
+4096/8=512
+\]
+个数据块地址。每个数据块又是 4096B，因此普通文件最大长度为
+\[
+512\times4096=2,097,152\text{B}=2\text{MB}.
+\]
+
+目录文件的内容固定由 addr 指向的 1 个磁盘块保存。每个符号目录项占 32B，因此一个目录最多包含
+\[
+4096/32=128
+\]
+个文件或子目录。
+\end{explanation}
+\subsection*{（2）设普通文件 f.dat 存在于目录 /user/data 下，为了获取 f.dat 的 ID，需要读几个磁盘块？若已知 f.dat 的 ID，读其第 42000 个字节（字节编号从 0 开始），需要读几个磁盘块？要求给出计算过程。}
+\begin{answer}
+获取 f.dat 的 ID 需要读 6 个磁盘块；已知 ID 后读取第 42000 个字节需要读 3 个磁盘块。
+\end{answer}
+
+\begin{explanation}
+为了从根目录逐级找到 /user/data/f.dat：
+
+已知根目录 ID，根据“ID 到基本目录项所在磁盘块地址”的对应关系可定位根目录基本目录项所在块。需要读根目录基本目录项块 1 次，得到根目录 addr；再读根目录内容块 1 次，找到 user 的 ID。
+
+然后读 user 的基本目录项块 1 次，再读 user 的目录内容块 1 次，得到 data 的 ID。
+
+最后读 data 的基本目录项块 1 次，再读 data 的目录内容块 1 次，得到 f.dat 的 ID。
+
+共
+\[
+2+2+2=6
+\]
+个磁盘块。
+
+若已经知道 f.dat 的 ID，则根据映射找到其基本目录项所在磁盘块，读 1 块得到 addr；addr 指向普通文件的索引块，再读 1 块即可获得目标数据块地址。
+
+第 42000 个字节所在逻辑数据块号为
+\[
+\left\lfloor\frac{42000}{4096}\right\rfloor=10,
+\]
+块内偏移为 $42000-10\times4096=1040$，因此读取索引块中的第 11 个块地址即可，再读对应数据块 1 次。
+
+总计
+\[
+1+1+1=3
+\]
+个磁盘块。
+\end{explanation}
+\subsection*{（3）在磁盘块大小不变的情况下，为了支持更大的文件，如何改进该文件系统？请给出 1 种改进方法，并说明改进后可支持的最大文件长度以及与改进前相比存在的不足。}
+\begin{answer}
+例如改为二级索引，最大文件长度可扩展到 1,073,741,824 字节（1GiB），代价是索引层次和访问/空间开销增加。
+\end{answer}
+
+\begin{explanation}
+可把原来的单级索引改为二级索引：基本目录项中的 addr 指向一级索引块，一级索引块中的每个地址再指向一个二级索引块，二级索引块中才存放数据块地址。
+
+每个索引块可保存 512 个地址，因此二级索引最多可以寻址
+\[
+512\times512=262144
+\]
+个数据块。最大文件长度为
+\[
+512^2\times4096=1,073,741,824\text{B}=1\text{GiB}.
+\]
+
+不足是访问文件数据时多了一层索引，TLB/缓存未命中时可能增加一次磁盘 I/O；索引块数量和元数据空间也更多，小文件使用二级索引时会造成额外开销。
+\end{explanation}
+\section*{五、进程管理与调度方案设计（12 分）}
+\begin{question}
+假设要设计一个操作系统的进程管理与调度方案，所需的计算机硬件条件完全具备。要求如下：①支持多进程并发执行时的资源共享；②进程分为 8 个优先级，优先级高的进程先执行，但要避免饥饿；③必要时需将某些进程整体换出到外存。请阐述方案的设计思路。
+
+要求：描述方案所采用的相关数据结构，并说明各数据结构及其所存储内容的含义和作用。
+\end{question}
+
+\begin{answer}
+核心结构包括 PCB、8 个优先级就绪队列、老化信息、资源控制块/等待队列、阻塞队列以及挂起/换出队列和交换区描述；分别支持上下文管理、优先级调度、防饥饿、资源共享与整体换出。
+\end{answer}
+
+\begin{explanation}
+可以设计如下数据结构和机制。
+
+（1）PCB（进程控制块）。每个进程一个 PCB，至少记录 PID、进程状态、寄存器/上下文、当前优先级、CPU 使用信息、所占资源、打开文件、内存映像位置以及换出信息等。进程切换、阻塞/唤醒、换入/换出都通过 PCB 保存和恢复状态。
+
+（2）8 个就绪队列 $Q[0]\sim Q[7]$。每个优先级一个队列，调度器总是从最高非空优先级队列选进程运行，同一级可使用时间片轮转，以实现“高优先级先执行”。
+
+（3）老化信息。PCB 中保存等待时间或动态优先级。进程在就绪队列等待时间达到阈值后逐步提升优先级，最高不超过规定上限；这样低优先级进程等待足够久后也能获得 CPU，避免饥饿。
+
+（4）资源控制块/资源等待队列。对每种可共享资源记录拥有者、剩余数量、等待进程队列等。临界资源使用互斥锁/信号量保护，共享资源可采用计数信号量、读写锁等机制，从而支持多进程安全共享。
+
+（5）阻塞队列。进程因等待 I/O、资源、同步事件而阻塞时，从就绪队列移到相应事件等待队列；事件完成后重新进入适当优先级的就绪队列。
+
+（6）换出队列/挂起队列与交换区描述信息。需要整体换出时，将进程地址空间写到外存交换区，在 PCB 中记录交换区位置并把状态改为“就绪挂起”或“阻塞挂起”；释放其占用的物理内存。需要恢复执行时，由中级调度选择合适进程换入，再进入就绪队列。
+
+整体上，短期调度负责 8 级优先级 CPU 调度，中级调度负责换入换出，资源控制结构与同步原语负责并发共享。
+\end{explanation}
+\section*{六、进程同步算法设计（18 分）}
+\begin{question}
+已知并发执行的进程 P1、P2 和 P3 以及 A、B、C、D、E 和 F 这 6 个功能。A 必须在 B、C、D、E 和 F 开始之前完成；B 必须在 C 完成之后方能开始；F 必须在 B 和 D 完成之后方能开始。设 P1 执行 B，P2 依次执行 C、D 和 E，P3 执行 F，执行 A 的进程为 P1、P2 或 P3 的其中一个，且不可预先指定。请用信号量的 P、V 操作设计该问题的同步算法。
+
+要求：给出所用共享变量（如果需要）和信号量及其初始值，并说明各自的含义；用伪代码写出进程 P1、P2 和 P3 的同步算法。
+\end{question}
+
+\begin{answer}
+用 mutex+aDone 实现“任意一个进程执行且只执行一次 A”；用 sC 保证 C$\to$B，用 sB、sD 同时保证 B,D$\to$F。
+\end{answer}
+
+\begin{explanation}
+首先要保证 A 恰好由 P1、P2、P3 中最先进入相应临界区的一个进程执行，并且另外两个进程必须等到 A 完成以后才能继续。可使用共享变量
+\[
+aDone=false
+\]
+以及互斥信号量
+\[
+mutex=1.
+\]
+三个进程在开始自己原有功能前都执行同一个 \texttt{doAOnce()}。令第一个进入 mutex 的进程在持有 mutex 时执行 A 并设置 aDone=true；其他进程只有在 A 完成、mutex 被释放后才能通过，因此满足 A 在所有其他功能之前完成。
+
+再设置：
+\[
+s_C=0,\quad s_B=0,\quad s_D=0.
+\]
+$s_C$ 表示 C 已完成，供 P1 在执行 B 前等待；$s_B$ 表示 B 已完成，$s_D$ 表示 D 已完成，P3 必须同时等待这两个条件后才能执行 F。
+
+伪代码如下：
+
+\begin{lstlisting}
+boolean aDone = false;
+semaphore mutex = 1;
+semaphore sC = 0;
+semaphore sB = 0;
+semaphore sD = 0;
+
+procedure doAOnce()
+{
+    P(mutex);
+    if (!aDone) {
+        A;
+        aDone = true;
+    }
+    V(mutex);
+}
+
+process P1()
+{
+    doAOnce();
+    P(sC);        // B must wait until C finishes
+    B;
+    V(sB);        // announce B finished
+}
+
+process P2()
+{
+    doAOnce();
+    C;
+    V(sC);        // allow B
+    D;
+    V(sD);        // announce D finished
+    E;
+}
+
+process P3()
+{
+    doAOnce();
+    P(sB);        // F waits for B
+    P(sD);        // F also waits for D
+    F;
+}
+\end{lstlisting}
+
+这里 A 的执行者没有预先指定：谁最先成功执行 $P(mutex)$，谁就执行 A。并且因为 mutex 一直保持到 A 完成，另外两个进程不可能在 A 完成前离开 \texttt{doAOnce()}，所以 B、C、D、E、F 都不会提前开始。
+\end{explanation}
+\end{document}

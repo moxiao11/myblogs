@@ -1,0 +1,470 @@
+% ---
+% title: 操作系统期末真题（二）解析
+% date: 2026-09-22
+% author: Crystal-Sky
+% tags: 操作系统, 期末复习, 真题解析
+% summary: 操作系统期末真题（二）题目与逐题解析：调度算法选择、死锁处理、SPOOLing、段页式地址转换与快表、并发进程、文件系统索引、访问局部性与同步算法。
+% slug: os-final-exam-2
+% course: 操作系统
+% course_slug: operating-systems
+% chapter: 期末真题
+% lesson_order: 2
+% lesson_type: 真题解析
+% challenge: false
+% inline_answers: true
+% ---
+\documentclass[UTF8,12pt]{ctexart}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{array,booktabs,tabularx,longtable}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.35em}
+\linespread{1.25}
+\setlist{nosep,leftmargin=2em}
+
+\newenvironment{question}{\par\medskip\noindent\textbf{【题目】}\par\smallskip}{\par\medskip}
+\newenvironment{explanation}{\par\noindent\textbf{【解析】}\par\smallskip}{\par\medskip}
+\newenvironment{answer}{\par\noindent\textbf{【答案】}\par\smallskip}{\par}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  frame=single,
+  breaklines=true
+}
+
+\begin{document}
+\section*{一、简答题（共 24 分）}
+
+\subsection*{1.（6 分）}
+\begin{question}
+假定有先来先服务、时间片轮转、短进程优先、静态优先级、动态优先级这 5 种调度算法可选择。在下列 2 种情况下，分别采用哪一种调度算法最合理？为什么？
+
+（1）使交互型进程具有合理的响应时间 （2）紧急任务能得到及时处理
+\end{question}
+
+\begin{answer}
+（1）时间片轮转；（2）优先级调度，其中直接体现紧急程度时可采用静态优先级。
+\end{answer}
+
+\begin{explanation}
+（1）交互型进程最关心的是响应时间。时间片轮转调度让就绪进程轮流获得 CPU，每个进程等待一个有限的轮转周期即可再次执行，因此比先来先服务更适合交互环境。
+
+（2）紧急任务要求一旦就绪就能优先得到 CPU。在给出的算法中，可用静态优先级调度，把紧急任务设置为高优先级；只要采用抢占式优先级调度，高优先级紧急任务可以及时执行。若系统还希望运行过程中根据等待时间等因素调整优先级，则可进一步采用动态优先级。
+\end{explanation}
+\subsection*{2.（6 分）}
+\begin{question}
+给出处理死锁的 3 种具体方法，并说明每种方法的适用场合。
+\end{question}
+
+\begin{answer}
+可采用死锁预防、死锁避免、死锁检测与解除三类方法，并根据资源需求能否预知以及死锁发生频率选择。
+\end{answer}
+
+\begin{explanation}
+常见的三类方法如下。
+
+（1）死锁预防：破坏死锁产生的四个必要条件之一。例如规定资源按统一顺序申请，破坏循环等待条件。适用于资源种类和申请规则比较明确、可以接受一定资源利用率损失的系统。
+
+（2）死锁避免：每次分配资源前判断分配后系统是否仍处于安全状态，例如银行家算法。适用于能够预先知道进程最大资源需求量、资源种类和数量相对稳定的系统。
+
+（3）死锁检测与解除：系统允许死锁发生，周期性检测资源分配图或等待关系；检测到死锁后通过撤销进程、抢占资源或回滚等方法解除。适用于死锁发生概率较低、预防或避免代价过大的系统。
+\end{explanation}
+\subsection*{3.（6 分）}
+\begin{question}
+假设有一台慢速的独占设备，多个进程需要共享访问该设备，可能存在什么问题？为什么？针对你所述的这个问题，给出一种解决方法，并简要描述你的方法。
+\end{question}
+
+\begin{answer}
+问题是慢速独占设备会使其他进程长时间等待；可使用 SPOOLing 技术，将直接设备访问转换为磁盘缓冲队列，由专门进程统一访问真实设备。
+\end{answer}
+
+\begin{explanation}
+独占设备在一个进程使用期间不能被其他进程使用，而设备速度又很慢，因此一个进程长时间占有设备时，其他需要该设备的进程会长时间等待，系统并发程度和设备使用效率受到影响。
+
+一种典型改进方法是 SPOOLing。进程不直接占用慢速独占设备，而是把要进行 I/O 的数据写入磁盘上的输出井（或输入井），由专门的 I/O 进程按照队列顺序统一驱动真实设备。这样，从普通进程的角度看，独占设备被改造成了可以被多个进程同时提交请求的“虚拟共享设备”。
+\end{explanation}
+\subsection*{4.（6 分）}
+\begin{question}
+在设计文件系统时，需要考虑多个设计目标，例如文件访问速度快、存储空间浪费少等，而有些设计目标之间往往存在冲突，需要权衡。举 2 个与文件系统相关的设计目标（不限于本题所列的设计目标）存在冲突的例子，分别解释可能冲突的情况，并简要阐述在设计时采取什么策略对相互冲突的设计目标进行权衡。
+\end{question}
+
+\begin{answer}
+合理答案不唯一，关键是指出两个确实存在冲突的文件系统设计目标，并给出冲突原因和折中策略。
+\end{answer}
+
+\begin{explanation}
+例 1：访问速度与存储空间利用率存在冲突。增大磁盘块可以减少大文件访问时的块数和寻址次数，提高顺序访问效率，但小文件或文件尾部更容易产生内部碎片。设计时可根据典型文件大小选择折中的块大小，或采用多种块/片段机制。
+
+例 2：可靠性与写入性能存在冲突。同步写、日志、数据多副本等机制可以提高崩溃恢复能力和可靠性，但会增加额外 I/O。设计时可以采用日志文件系统、写回缓存、批量提交等方式，在可靠性要求与性能之间折中。
+\end{explanation}
+\section*{二、虚拟存储管理（18 分）}
+已知某计算机系统采用虚拟段页式存储管理，虚拟地址为 16 位，其中第 0-7 位为页内地址，第 8-11 位为页号，第 12-15 位为段号。设为进程 P 固定分配了 4 个物理块（或称页框、页帧，page frame），采用局部置换策略，快表长度为 2，页的置换以及快表项的置换均采用 LRU（Least Recently Used）算法，段表和页表在内存中。目前进程 P 有 4 页在内存中，其段号、页号及对应的物理块号如下（假定这些虚拟地址均在进程 P 的虚拟地址空间内）：
+
+\begin{center}
+\begin{tabular}{ccc}
+\toprule
+段号 & 页号（十进制） & 物理块号\\
+\midrule
+0 & 2 & 160H\\
+0 & 10 & 258H\\
+2 & 8 & 69EH\\
+2 & 15 & 48AH\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+此时进程 P 被调度执行，且快表为空。依次访问下列虚拟地址：
+
+（1）2F10H （2）0A4EH （3）2FA0H （4）0290H （5）2560H （6）0238H
+
+\subsection*{1. 给出这些虚拟地址分别对应的物理地址，要求用十六进制表示，并说明计算过程。}
+\begin{answer}
+依次为 48A10H、2584EH、48AA0H、16090H、69E60H、16038H。
+\end{answer}
+
+\begin{explanation}
+页内地址占 8 位，因此每页大小为 $2^8=256$ 字节。一个 16 位虚拟地址可以直接按十六进制拆成：最高 1 位十六进制数为段号，中间 1 位为页号，最低 2 位为页内偏移。
+
+\begin{center}
+\begin{tabular}{ccccc}
+\toprule
+虚拟地址 & 段号 & 页号 & 页内偏移 & 物理地址\\
+\midrule
+2F10H & 2 & FH=15 & 10H & 48A10H\\
+0A4EH & 0 & AH=10 & 4EH & 2584EH\\
+2FA0H & 2 & FH=15 & A0H & 48AA0H\\
+0290H & 0 & 2 & 90H & 16090H\\
+2560H & 2 & 5 & 60H & 69E60H\\
+0238H & 0 & 2 & 38H & 16038H\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+前四次访问的页面均已在内存中。第 5 次访问 $(2,5)$ 时发生缺页。此前四次访问过的驻留页为 $(2,15)$、$(0,10)$、$(2,15)$、$(0,2)$，而 $(2,8)$ 在这段访问过程中最久未使用，所以按 LRU 将 $(2,8)$ 所在的 69EH 物理块换出，再把 $(2,5)$ 调入 69EH。因此第 5 个物理地址为 69E60H。
+\end{explanation}
+\subsection*{2. 给出进程 P 依次访问上述 6 个虚拟地址后快表的内容（段号、页号及其对应的物理块号）。}
+\begin{answer}
+最终快表包含：段 2、页 5、物理块 69EH；段 0、页 2、物理块 160H。
+\end{answer}
+
+\begin{explanation}
+快表长度为 2，并采用 LRU。按访问顺序维护：
+
+第一次 $(2,15)$：快表加入 $(2,15)\to48AH$；
+
+第二次 $(0,10)$：加入 $(0,10)\to258H$；
+
+第三次再次访问 $(2,15)$：命中，并把它更新为最近使用；
+
+第四次访问 $(0,2)$：未命中，淘汰最久未使用的 $(0,10)$，加入 $(0,2)\to160H$；
+
+第五次访问 $(2,5)$：缺页处理完成并重新执行后，将 $(2,5)\to69EH$ 加入快表，淘汰 $(2,15)$；
+
+第六次访问 $(0,2)$：快表命中，并把 $(0,2)$ 更新为最近使用。
+
+因此最后两个快表项为 $(2,5)\to69EH$ 和 $(0,2)\to160H$，其中 $(0,2)$ 是最近一次使用的表项。
+\end{explanation}
+\subsection*{3. 你认为在该问题所给定的情形下，页的置换以及快表项的置换采用 LRU 算法是否有效？请解释具体理由。}
+\begin{answer}
+有效。LRU 能利用访问局部性，优先保留近期访问过的页面/快表项；不过本题页面置换次数很少，因此页面 LRU 的优势体现有限。
+\end{answer}
+
+\begin{explanation}
+LRU 利用“最近被访问的页面在近期再次被访问的可能性较大”的局部性规律。从本题访问序列看，2F 页面很快被再次访问，02 页面也在较短间隔后再次访问，所以用 LRU 管理快表能够保留近期使用的表项并产生快表命中。
+
+页面置换方面，第 5 次访问发生缺页时，当前 4 个驻留页中 $(2,8)$ 在本次执行序列中一直未被使用，而其他页面都刚刚被访问，因此将 $(2,8)$ 置换出去符合局部性原则。由于本题只发生一次页面置换，能够观察到的性能差异有限，但该次选择本身是合理的。
+\end{explanation}
+\section*{三、并发进程与共享变量（12 分）}
+设有两个并发执行的进程 P1 与 P2，其执行的代码分别如下。
+
+进程 P1：
+\begin{lstlisting}
+while (x != 12) {
+    x = x * 2;
+}
+\end{lstlisting}
+
+进程 P2：
+\begin{lstlisting}
+while (x != 12) {
+    x = x * 3;
+}
+\end{lstlisting}
+
+其中，x 是进程 P1 和 P2 的共享变量，初值为 1。
+
+\subsection*{1. 给出进程 P1 和 P2 都能正常执行结束的 2 种情况，要求说明每种情况的执行过程。}
+\begin{answer}
+例如执行序列 $\times2,\times3,\times2$ 或 $\times3,\times2,\times2$，均可到达 12，并在没有额外乘法发生时使两个进程退出。
+\end{answer}
+
+\begin{explanation}
+只要在某个时刻把 $x$ 变成 12，并且此后两个进程都在再次执行循环体前检查到 $x=12$，两个进程即可退出。
+
+情况 1：P1 先执行一次：$1\to2$；P2 执行一次：$2\to6$；P1 再执行一次：$6\to12$。之后 P1、P2 检查循环条件时都发现 $x=12$，正常结束。
+
+情况 2：P2 先执行一次：$1\to3$；P1 执行一次：$3\to6$；P1 再执行一次：$6\to12$。之后两个进程均检查到 12 并退出。
+\end{explanation}
+\subsection*{2. 给出进程 P1 和 P2 都不能正常执行结束的 2 种情况，要求说明每种情况的执行过程。}
+\begin{answer}
+只要调度使 $x$ 在到达 12 之前越过 12，例如出现 $1\to2\to4\to8\to16$ 或 $1\to3\to9\to27$，以后就无法回到 12。
+\end{answer}
+
+\begin{explanation}
+情况 1：P1 连续获得 CPU，$x$ 依次为 $1,2,4,8,16,32,\ldots$。一旦越过 12，以后再乘 2 或乘 3 都无法回到 12，因此两个进程都无法通过条件 $x=12$ 正常退出。
+
+情况 2：P2 连续执行若干次，$x$ 依次为 $1,3,9,27,81,\ldots$。同样会越过 12，之后只能继续乘 2 或 3，不会回到 12，因此两个进程均不能正常结束。
+\end{explanation}
+\subsection*{3. 在保持 P1 和 P2 已有代码行不变的条件下，为了使进程 P1 和 P2 都能正常执行结束，请修改 P1 和 P2 的代码（不可以添加改变 x 值、强行退出 while 循环或终止程序的操作），并加以说明。}
+\begin{answer}
+通过信号量约束两个进程的执行次序，使 $x$ 必然按 $1\to2\to6\to12$ 变化，即可保证二者正常结束。
+\end{answer}
+
+\begin{explanation}
+可以利用两个信号量严格控制前三次乘法的次序为 P1、P2、P1，使 $x$ 必然经历 $1\to2\to6\to12$。设信号量 $s_1=1,s_2=0$：
+
+\begin{lstlisting}
+// P1
+P(s1);
+while (x != 12) {
+    x = x * 2;
+    V(s2);
+    P(s1);
+}
+
+// P2
+P(s2);
+while (x != 12) {
+    x = x * 3;
+    V(s1);
+    P(s2);
+}
+V(s1);
+\end{lstlisting}
+
+开始时 P1 执行一次，使 $x=2$；随后唤醒 P2，P2 使 $x=6$；再唤醒 P1，P1 使 $x=12$。P1 随后等待，P2 被唤醒后重新检查 while 条件并退出，再用最后一个 $V(s_1)$ 唤醒 P1，P1 重新检查条件后也退出。原有的 while 条件和乘法语句均未修改，也没有增加直接改变 $x$ 或强制退出的操作。
+\end{explanation}
+\section*{四、文件系统（16 分）}
+某磁盘文件系统采用树型目录结构，目录当作文件，每个目录项包含文件名等所有文件属性。设磁盘逻辑块与物理块的大小均为 1024 个字节，每个目录项的大小为 256 个字节，磁盘物理块（以下简称磁盘块）号用 8 个字节表示，根据磁盘块号可确定对应的磁盘物理地址，且根目录的内容已读入内存。设文件 f.dat 存在于目录/data 下，目录/data 下共有文件 801 个，文件（包括目录）内容占用不连续的磁盘块，采用单级索引结构，目录项给出文件索引表所在的起始磁盘块号，索引表按逻辑顺序依次存放文件内容所占用的磁盘块号，若索引表大小超过 1 个磁盘块，则占用连续的多个磁盘块。
+
+\subsection*{1. 为了获得文件 f.dat 对应的索引表起始地址，最少需要读多少个磁盘块？最多需要读多少个磁盘块？要求给出计算过程。}
+\begin{answer}
+最少 2 个磁盘块，最多 203 个磁盘块。
+\end{answer}
+
+\begin{explanation}
+每个目录项为 256B，每个磁盘块为 1024B，因此一个目录内容块可存放
+\[
+1024/256=4
+\]
+个目录项。/data 下共有 801 个文件，所以 /data 目录内容占
+\[
+\left\lceil\frac{801}{4}\right\rceil=201
+\]
+个磁盘块。
+
+/data 目录自己的单级索引表需要保存 201 个内容块号，每个块号占 8B，共
+\[
+201\times8=1608\text{B},
+\]
+所以索引表占
+\[
+\left\lceil\frac{1608}{1024}\right\rceil=2
+\]
+个连续磁盘块。
+
+根目录内容已在内存，因此可以直接得到 /data 的索引表起始地址。若 f.dat 恰好在 /data 的第一个目录内容块中，只需读第一个索引表块以取得第一个内容块地址，再读该目录内容块，共 2 块。
+
+若 f.dat 位于最后才能找到的位置，需要读完 2 个索引表块以及 201 个目录内容块，共
+\[
+2+201=203
+\]
+块。
+\end{explanation}
+\subsection*{2. 设文件 f.dat 的大小为 512KB，其索引表需要占用多少个磁盘块？在获得文件 f.dat 对应的索引表起始地址后，若要读取文件 f.dat 的第 409680 个字节（字节编号从 0 开始），需要读多少个磁盘块？要求给出计算过程。}
+\begin{answer}
+索引表占 4 个磁盘块；读取第 409680 个字节还需要读 2 个磁盘块。
+\end{answer}
+
+\begin{explanation}
+文件大小为 $512\text{KB}=512\times1024$B，每个内容块 1024B，因此文件占 512 个内容块。每个块号 8B，所以索引表大小为
+\[
+512\times8=4096\text{B},
+\]
+即占
+\[
+4096/1024=4
+\]
+个磁盘块。
+
+第 409680 个字节所在的逻辑块号为
+\[
+\left\lfloor\frac{409680}{1024}\right\rfloor=400,
+\]
+块内偏移为
+\[
+409680-400\times1024=80.
+\]
+因此它位于第 401 个内容块。一个索引表块可放 $1024/8=128$ 个块号，第 401 个内容块对应的索引项编号为 400，位于第 4 个索引表块（索引 384--511）。因为索引表连续，已知起始地址后可直接读第 4 个索引表块，再读目标数据块，共 2 个磁盘块。
+\end{explanation}
+\subsection*{3. 请指出该文件系统存在的一种不足，并解释理由。针对这种不足，给出一种改进方法，并解释理由。}
+\begin{answer}
+例如可指出“大目录线性查找速度慢”，并用哈希目录或 B/B+ 树目录改进。
+\end{answer}
+
+\begin{explanation}
+一种明显不足是目录查找采用线性扫描。目录项很大（256B），/data 有 801 个目录项，需要占 201 个内容块；如果目标文件靠后，按文件名查找会产生大量磁盘 I/O。
+
+可以将目录组织成哈希目录或 B/B+ 树目录，使文件名能够快速定位到相应目录项。这样可以把大量顺序扫描转换为少量索引查找，尤其适合目录中文件数较多的情况。代价是目录结构更复杂，需要额外索引空间，并增加插入、删除时的维护开销。
+\end{explanation}
+\section*{五、内存管理与程序访问局部性（12 分）}
+下列 C 程序 P1 和 P2 的功能相同，其中 a 为数组 int a[1024][1024]（a 为全局变量），C 语言的数组在内存中以行主次序（按行优先）存放。假定 P1 和 P2 在某计算机上运行，只考虑操作系统的内存管理机制。
+
+程序 P1：
+\begin{lstlisting}
+int i, j;
+for (i = 0; i < 1024; i++) {
+ for (j = 0; j < 1024; j = j + 2) a[i][j] = 0;
+ for (j = 1; j < 1024; j = j + 2) a[i][j] = 0;
+}
+\end{lstlisting}
+
+程序 P2：
+\begin{lstlisting}
+int i, j;
+for (j = 0; j < 1024; j++)
+ for (i = 0; i < 1024; i++)
+  a[i][j] = 0;
+\end{lstlisting}
+
+\subsection*{1. 在什么情况下 P1 和 P2 的执行效率几乎没有区别？请解释理由。}
+\begin{answer}
+当数组相关页面都能驻留内存、基本不发生缺页时，两者从操作系统内存管理角度的效率几乎相同。
+\end{answer}
+
+\begin{explanation}
+如果进程获得的物理内存足以容纳数组所涉及的全部页面，或这些页面已经全部驻留在内存且执行过程中基本不发生缺页，那么从操作系统内存管理角度看，P1 和 P2 都只是对同一批已驻留页面进行访问，缺页开销几乎相同，因此二者执行效率几乎没有区别。
+\end{explanation}
+\subsection*{2. 在什么情况下 P1 和 P2 的执行效率有明显差异？哪个效率更高？请解释理由。}
+\begin{answer}
+请求分页且物理内存不足时差异明显，P1 更高效，因为它更符合行优先存储的空间局部性。
+\end{answer}
+
+\begin{explanation}
+在请求分页且可用物理块不足、会发生频繁页面置换时，二者差异明显。C 数组按行存放，P1 在一行内完成偶数列和奇数列的访问，访问地址总体集中在当前行附近，空间局部性较好；一个页面调入后会被连续访问多次。
+
+P2 按列访问，相邻两次访问 $a[i][j]$ 和 $a[i+1][j]$ 在内存中相隔一整行。若一行大小接近或等于一个页面，则连续访问会不断跳到不同页面；当页框数量不足以容纳这些页面时容易出现大量缺页甚至抖动。因此 P1 效率更高。
+\end{explanation}
+\subsection*{3. 是否可以写出一个在某种内存管理机制下与 P1、P2 功能相同而执行效率更高的 C 语言程序？如果不可以，请说明理由；如果可以，请写出 C 语言程序代码，并指出相应的内存管理机制。}
+\begin{answer}
+可以。利用全局变量自动初始化为 0，并结合请求分页/按需零填充机制，可以不逐元素写数组，从而比 P1、P2 更高效。
+\end{answer}
+
+\begin{explanation}
+可以。题目特别说明 a 是全局变量。C 语言中未显式初始化的全局变量在程序开始执行前按语言规则初始化为 0。因此如果程序的目标只是使整个数组为 0，就不需要再次逐元素写 0，例如：
+
+\begin{lstlisting}
+int a[1024][1024];
+
+int main(void)
+{
+    return 0;
+}
+\end{lstlisting}
+
+在采用请求分页、按需零填充（demand-zero）等机制的系统中，未真正访问这些数组页面时，操作系统可以暂不为它们分配实际物理页框；需要访问时再提供内容为 0 的页面。因此上述程序既避免了 P1/P2 的大量写操作，也可避免相应的缺页和物理页分配，效率更高。
+\end{explanation}
+\section*{六、同步问题（18 分）}
+幼儿园有张老师、李老师和若干小朋友，水果无数。桌上有一个空盘子，最多能放 30 个水果。小朋友们从盘中拿水果吃，每人每次只能拿 1 个，其中，男孩子只拿苹果，女孩子只拿橘子。张老师和李老师向盘中随机放苹果或橘子，每次只放 1 个，每位老师放 10 个水果后便休息，由另一位老师接替，两位老师轮流（假设由张老师开始，李老师先休息）。请用信号量的 P、V 操作设计该问题的同步算法。
+
+\subsection*{1. 给出所用共享变量（如果需要）和信号量及其初始值，并说明各自的含义。}
+\begin{answer}
+$empty=30, apple=0, orange=0, zhang=1, li=0$。
+\end{answer}
+
+\begin{explanation}
+可以定义：
+\[
+empty=30,\quad apple=0,\quad orange=0,
+\]
+其中 empty 表示盘中空位置数量，apple 表示盘中苹果数量，orange 表示盘中橘子数量。
+
+再定义
+\[
+zhang=1,\quad li=0,
+\]
+分别表示张老师和李老师是否轮到放水果。初始由张老师开始，因此 zhang 为 1，李老师先休息，因此 li 为 0。
+
+由于任意时刻只有一位老师处于放水果阶段，教师之间不需要额外的互斥信号量；empty 能保证盘中水果总数不超过 30。
+\end{explanation}
+\subsection*{2. 用伪代码写出描述张老师、李老师、男孩子和女孩子活动的同步算法，必要之处给出注释。}
+\begin{answer}
+使用 empty 控制容量，apple/orange 控制对应消费者，zhang/li 控制两位老师每放 10 个水果后轮换。
+\end{answer}
+
+\begin{explanation}
+一种可行伪代码如下：
+
+\begin{lstlisting}
+semaphore empty = 30;
+semaphore apple = 0;
+semaphore orange = 0;
+semaphore zhang = 1;
+semaphore li = 0;
+
+process TeacherZhang() {
+    while (true) {
+        P(zhang);
+        for (int k = 0; k < 10; k++) {
+            P(empty);
+            if (randomly_choose_apple())
+                V(apple);
+            else
+                V(orange);
+        }
+        V(li);
+    }
+}
+
+process TeacherLi() {
+    while (true) {
+        P(li);
+        for (int k = 0; k < 10; k++) {
+            P(empty);
+            if (randomly_choose_apple())
+                V(apple);
+            else
+                V(orange);
+        }
+        V(zhang);
+    }
+}
+
+process Boy() {
+    while (true) {
+        P(apple);
+        // take one apple and eat it
+        V(empty);
+    }
+}
+
+process Girl() {
+    while (true) {
+        P(orange);
+        // take one orange and eat it
+        V(empty);
+    }
+}
+\end{lstlisting}
+
+教师每放入一个水果都先申请一个空位置，然后根据随机选择的水果种类增加相应计数。每完成 10 次成功放置后才唤醒另一位老师。男孩只有在 apple 大于 0 时才能取苹果，女孩只有在 orange 大于 0 时才能取橘子；每取走一个水果就释放一个空位置。
+\end{explanation}
+\end{document}
