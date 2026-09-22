@@ -6,8 +6,9 @@
   "scripts": {
     "build": "node scripts/build.js",
     "dev": "node scripts/serve.js",
+    "studio": "node scripts/studio-server.js",
     "new": "node scripts/new-post.js",
-    "check": "node --check scripts/build.js && node --check scripts/serve.js && node --check scripts/new-post.js"
+    "check": "node --check scripts/build.js && node --check scripts/serve.js && node --check scripts/new-post.js && node --check scripts/studio-server.js && node --check latex-studio/app.js"
   },
   "engines": {
     "node": ">=18"

@@ -4,6 +4,7 @@ dist/
 *.log
 .env
 tmp/
+.latex-studio-build/
 cnblogs-home.html
 cnblogs-custom.css
 cnblogs-news.html

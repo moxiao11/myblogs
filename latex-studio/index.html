@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Paperleaf · LaTeX 博客写作台</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Paperleaf 首页">
+      <span class="brand-mark" aria-hidden="true">P</span>
+      <span>
+        <strong>Paperleaf</strong>
+        <small>LATEX BLOG STUDIO</small>
+      </span>
+    </a>
+    <div class="document-title">
+      <span class="document-dot" aria-hidden="true"></span>
+      <span id="current-title">正在打开文章…</span>
+      <span class="save-state" id="save-state">准备中</span>
+    </div>
+    <div class="top-actions">
+      <button class="quiet-button" id="template-button" type="button">模板设置</button>
+      <button class="primary-button" id="save-button" type="button"><span>保存并渲染</span><kbd>Ctrl S</kbd></button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="explorer" aria-label="文章列表">
+      <div class="explorer-heading">
+        <div>
+          <span class="eyebrow">WORKSPACE</span>
+          <h1>我的文章</h1>
+        </div>
+        <button class="icon-button" id="new-post-button" type="button" aria-label="新建文章" title="新建文章">＋</button>
+      </div>
+      <label class="search-box">
+        <span aria-hidden="true">⌕</span>
+        <input id="post-search" type="search" placeholder="搜索标题或路径" autocomplete="off">
+        <kbd>⌘ K</kbd>
+      </label>
+      <nav class="post-list" id="post-list" aria-label="LaTeX 文章"></nav>
+      <div class="explorer-footer">
+        <span class="engine-light" aria-hidden="true"></span>
+        <span>XeLaTeX 已连接</span>
+        <button id="refresh-list" type="button">刷新</button>
+      </div>
+    </aside>
+
+    <section class="editor-pane" aria-label="LaTeX 编辑器">
+      <div class="pane-toolbar">
+        <div class="file-tab">
+          <span class="tex-icon">TeX</span>
+          <span id="file-name">—</span>
+          <span class="dirty-dot" id="dirty-dot" aria-label="有未保存修改"></span>
+        </div>
+        <div class="editor-metrics">
+          <span id="line-count">0 行</span>
+          <span id="word-count">0 字</span>
+        </div>
+      </div>
+      <div class="editor-shell">
+        <pre class="line-numbers" id="line-numbers" aria-hidden="true">1</pre>
+        <textarea id="source-editor" aria-label="LaTeX 源码" spellcheck="false" wrap="off" placeholder="选择一篇文章开始写作…"></textarea>
+      </div>
+      <div class="statusbar">
+        <div><span class="status-dot" id="status-dot"></span><span id="compile-status">等待内容</span></div>
+        <div class="status-details">
+          <span id="document-mode">自动识别模板</span>
+          <span>UTF-8</span>
+          <span>LaTeX</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="preview-pane" aria-label="渲染预览">
+      <div class="pane-toolbar preview-toolbar">
+        <div class="segmented" role="tablist" aria-label="预览模式">
+          <button class="active" id="blog-tab" type="button" role="tab" aria-selected="true">博客效果</button>
+          <button id="pdf-tab" type="button" role="tab" aria-selected="false">PDF 分页</button>
+        </div>
+        <div class="preview-actions">
+          <span class="page-badge" id="page-badge" hidden>— 页</span>
+          <button class="icon-button small" id="reload-preview" type="button" aria-label="重新渲染" title="重新渲染">↻</button>
+          <button class="icon-button small" id="open-preview" type="button" aria-label="在新窗口打开预览" title="在新窗口打开">↗</button>
+        </div>
+      </div>
+      <div class="preview-stage">
+        <div class="preview-loading" id="preview-loading">
+          <span class="spinner"></span>
+          <strong>正在准备一致性预览</strong>
+          <p>博客效果使用正式发布时的同一套模板与样式。</p>
+        </div>
+        <iframe id="blog-preview" title="博客最终效果预览"></iframe>
+        <embed id="pdf-preview" type="application/pdf" title="LaTeX PDF 分页预览">
+        <div class="empty-pdf" id="empty-pdf" hidden>
+          <div class="paper-stack" aria-hidden="true"><span></span></div>
+          <h2>PDF 正在编译</h2>
+          <p>博客预览不受影响，完成后会自动显示分页结果。</p>
+        </div>
+        <section class="error-panel" id="error-panel" hidden aria-live="polite">
+          <div class="error-heading">
+            <div><span>!</span><strong>PDF 编译遇到问题</strong></div>
+            <button id="close-error" type="button">收起</button>
+          </div>
+          <pre id="error-output"></pre>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="new-post-dialog">
+    <form method="dialog" class="dialog-card" id="new-post-form">
+      <div class="dialog-heading">
+        <div><span class="eyebrow">NEW DRAFT</span><h2>新建 LaTeX 文章</h2></div>
+        <button class="icon-button" value="cancel" aria-label="关闭" type="submit">×</button>
+      </div>
+      <label>文章标题<input id="new-title" required placeholder="例如：二叉树的遍历方法"></label>
+      <label>保存文件夹<input id="new-folder" placeholder="例如：data-structures（可不填）"></label>
+      <p>会自动添加博客元信息，并使用当前博客模板预览。</p>
+      <div class="dialog-actions"><button class="quiet-button" value="cancel" type="submit">取消</button><button class="primary-button" id="create-post" value="default" type="submit">创建草稿</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="template-dialog" class="template-dialog">
+    <form method="dialog" class="dialog-card template-card" id="template-form">
+      <div class="dialog-heading">
+        <div><span class="eyebrow">PDF TEMPLATE</span><h2>正文片段模板</h2></div>
+        <button class="icon-button" value="cancel" aria-label="关闭" type="submit">×</button>
+      </div>
+      <div class="template-note"><span>i</span><p>完整 LaTeX 文档会保留自己的导言区；只有博客正文片段会套用此模板。请保留 <code>%% CONTENT %%</code>。</p></div>
+      <label>当前模板<select id="template-select"></select></label>
+      <textarea id="template-editor" spellcheck="false" wrap="off" aria-label="LaTeX 模板源码"></textarea>
+      <div class="dialog-actions"><button class="quiet-button" value="cancel" type="submit">取消</button><button class="primary-button" id="save-template" value="default" type="submit">保存模板</button></div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
